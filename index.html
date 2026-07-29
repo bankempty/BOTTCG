@@ -3,17 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BOT TCG - Google Sheets Realtime Swiss-Round</title>
+    <title>BOT TCG - Swiss-Round & Leaderboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
-
     <style>
         body {
             font-family: 'Kanit', sans-serif;
             background-color: #07090e;
             background-image: 
                 radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.12) 0%, transparent 50%),
-                radial-gradient(circle at 100% 100%, rgba(59, 130, 246, 0.08) 0%, transparent 40%);
+                radial-gradient(circle at 100% 100%, rgba(99, 102, 241, 0.08) 0%, transparent 40%);
         }
         .font-cyber { font-family: 'Orbitron', sans-serif; }
         .cyber-card {
@@ -41,6 +40,23 @@
             box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
         }
         .btn-cyber-admin:hover { box-shadow: 0 0 18px rgba(59, 130, 246, 0.5); }
+        
+        .highlight-match {
+            border-color: #10b981 !important;
+            box-shadow: 0 0 25px rgba(16, 185, 129, 0.5) !important;
+            background: rgba(16, 185, 129, 0.1) !important;
+        }
+
+        /* Print Style for Paper Boards */
+        @media print {
+            body { background: white !important; color: black !important; padding: 0 !important; }
+            header, nav, .no-print, button, input, select { display: none !important; }
+            .cyber-card { background: white !important; border: 1px solid #ccc !important; box-shadow: none !important; color: black !important; }
+            .print-only { display: block !important; }
+            .print-title { font-size: 20pt; font-weight: bold; text-align: center; margin-bottom: 10px; }
+            .print-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+            .print-table th, .print-table td { border: 1px solid #000; padding: 8px; text-align: left; }
+        }
     </style>
 </head>
 <body class="text-slate-100 min-h-screen p-4 md:p-8">
@@ -51,45 +67,55 @@
             <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
             <div class="flex items-center gap-4 z-10">
                 <div class="w-12 h-12 rounded-xl bg-slate-900/90 border border-emerald-500/40 p-1 flex items-center justify-center shadow-lg shadow-emerald-500/20 overflow-hidden">
-                    <img src="https://i.ibb.co/vnFCDvL/images-4.jpg" alt="Logo" class="max-w-full max-h-full object-contain rounded-lg">
+                    <img src="https://i.ibb.co/vnFCDvL/images-4.jpg" alt="Battle Of Talingchan Logo" class="max-w-full max-h-full object-contain rounded-lg">
                 </div>
                 <div>
                     <h1 class="text-2xl md:text-3xl font-extrabold tracking-wide font-cyber bg-gradient-to-r from-emerald-400 via-teal-200 to-cyan-400 bg-clip-text text-transparent">
-                        BOT TCG SHEETS
+                        BOT TCG TOURNAMENT
                     </h1>
-                    <p class="text-xs text-emerald-400/80 font-mono tracking-widest uppercase">SWISS-ROUND & LEADERBOARD (GOOGLE SHEETS)</p>
+                    <p class="text-xs text-emerald-400/80 font-mono tracking-widest uppercase">SWISS-ROUND & MONTHLY LEADERBOARD</p>
                 </div>
             </div>
             
             <div class="flex items-center gap-3 z-10">
-                <span id="sync-status" class="text-[10px] font-mono px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30">⏳ กำลังซิงค์ข้อมูล...</span>
+                <a href="https://bottcg.com/" target="_blank" class="bg-slate-800/80 hover:bg-slate-700 px-4 py-2 rounded-xl text-xs font-semibold border border-emerald-500/30 transition text-emerald-300 flex items-center gap-2 shadow-sm">
+                    <span>🌐</span> Official Website ↗
+                </a>
                 <div id="admin-auth-btn"></div>
             </div>
         </header>
 
         <!-- Navigation Tabs -->
-        <div class="flex flex-wrap gap-2 border-b border-slate-800/80 pb-2">
-            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 text-emerald-400 bg-emerald-500/10 border border-emerald-500/40">📊 Monthly Dashboard</button>
+        <div class="flex flex-wrap gap-2 border-b border-slate-800/80 pb-2 no-print">
+            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 text-emerald-400 bg-emerald-500/10 border border-emerald-500/30">📊 Monthly Dashboard</button>
             <button onclick="switchTab('pairings-public')" id="tab-pairings-public" class="px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">🎯 ตารางจับคู่รอบปัจจุบัน</button>
             <button onclick="switchTab('standings')" id="tab-standings" class="px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">🏆 ตารางคะแนนรวม</button>
-            <button onclick="switchTab('history')" id="tab-history" class="px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">📂 ประวัติการแข่ง</button>
+            <button onclick="switchTab('history')" id="tab-history" class="px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">📂 ประวัติการแข่งย้อนหลัง</button>
             
             <!-- ADMIN ONLY TABS -->
-            <button onclick="switchTab('players')" id="tab-players" class="admin-only hidden px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200">⚙️ 1. ตั้งค่า & จัดการผู้แข่ง</button>
-            <button onclick="switchTab('rounds')" id="tab-rounds" class="admin-only hidden px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200">⚙️ 2. จับคู่ & ใส่ผล</button>
+            <button onclick="switchTab('players')" id="tab-players" class="admin-only hidden px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">⚙️ 1. จัดการผู้แข่ง</button>
+            <button onclick="switchTab('rounds')" id="tab-rounds" class="admin-only hidden px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">⚙️ 2. จับคู่ & ใส่ผล</button>
+            <button onclick="switchTab('admin-manage')" id="tab-admin-manage" class="admin-only hidden px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">👑 จัดการ Admin</button>
         </div>
 
-        <!-- TAB 1: DASHBOARD -->
+        <!-- TAB 1: DASHBOARD (PUBLIC) -->
         <section id="sec-dashboard" class="space-y-6">
-            <div class="cyber-card p-5 rounded-2xl flex justify-between items-center">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center cyber-card p-5 rounded-2xl gap-4">
                 <div>
-                    <h2 class="text-xl font-bold text-amber-400 font-cyber">👑 MONTHLY LEADERBOARD</h2>
-                    <p class="text-slate-400 text-xs">คะแนนสะสมรวมจาก Google Sheets</p>
+                    <h2 class="text-xl font-bold text-amber-400 flex items-center gap-2 font-cyber">
+                        👑 MONTHLY LEADERBOARD
+                    </h2>
+                    <p class="text-slate-400 text-xs">ตารางอันดับคะแนนสะสมรวมประจำเดือน BOT TCG</p>
+                </div>
+                <div class="admin-only hidden flex gap-2">
+                    <button onclick="exportData()" class="bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 px-3 py-2 rounded-lg border border-slate-700 transition">📥 Export</button>
+                    <button onclick="importData()" class="bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 px-3 py-2 rounded-lg border border-slate-700 transition">📤 Import</button>
                 </div>
             </div>
+
             <div class="cyber-card rounded-2xl overflow-hidden">
                 <table class="w-full text-left border-collapse">
-                    <thead class="bg-slate-900/80 text-emerald-400 text-xs uppercase font-mono border-b border-slate-800">
+                    <thead class="bg-slate-900/80 text-emerald-400 text-xs uppercase tracking-wider font-mono border-b border-slate-800">
                         <tr>
                             <th class="p-4"># RANK</th>
                             <th class="p-4">PLAYER</th>
@@ -103,26 +129,55 @@
             </div>
         </section>
 
-        <!-- TAB: PUBLIC PAIRINGS -->
+        <!-- TAB PUBLIC: CURRENT PAIRINGS & TABLES -->
         <section id="sec-pairings-public" class="hidden space-y-4">
-            <div class="cyber-card p-5 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-4">
-                <div class="flex items-center gap-3">
-                    <h2 class="text-xl font-bold text-emerald-400 font-cyber">🎯 PAIRINGS</h2>
-                    <select id="public-round-select" onchange="renderPublicPairings()" class="bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-3 py-1.5 text-xs font-mono"></select>
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center cyber-card p-5 rounded-2xl gap-4">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <h2 class="text-xl font-bold text-emerald-400 font-cyber">
+                        🎯 PAIRINGS
+                    </h2>
+                    <select id="public-round-select" onchange="renderPublicPairings()" class="bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-500 font-mono"></select>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                    <!-- SEARCH BOX -->
+                    <div class="relative flex-1 sm:w-64">
+                        <input type="text" id="public-search-input" onkeyup="renderPublicPairings()" placeholder="🔍 ค้นหาชื่อนักแข่ง / โต๊ะ..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <!-- PRINT BUTTON -->
+                    <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5">
+                        🖨️ พิมพ์ตาราง
+                    </button>
                 </div>
             </div>
+
             <div id="public-pairings-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
         </section>
 
-        <!-- TAB: STANDINGS -->
+        <!-- TAB 2: CURRENT STANDINGS (PUBLIC) -->
         <section id="sec-standings" class="hidden space-y-4">
-            <div class="cyber-card p-5 rounded-2xl flex justify-between items-center">
-                <h3 class="font-bold text-emerald-400 font-cyber text-lg" id="current-tourney-title-display">CURRENT STANDINGS</h3>
-                <button onclick="finishTournament()" class="admin-only hidden btn-cyber-primary text-slate-950 font-black px-5 py-2.5 rounded-xl text-sm">💾 จบทัวร์นาเมนต์ & บันทึกผล</button>
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center cyber-card p-5 rounded-2xl gap-4">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h3 class="font-bold text-emerald-400 font-cyber text-lg">CURRENT TOURNAMENT STANDINGS</h3>
+                        <button onclick="openTiebreakModal()" class="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 font-bold text-xs flex items-center justify-center transition border border-emerald-500/40" title="ดูคำอธิบายสูตรไทเบรก">
+                            i
+                        </button>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">
+                        ลำดับการจัดอันดับ: <span class="text-emerald-300 font-semibold">Points (คะแนน)</span> ➔ 
+                        <span class="text-teal-300 font-semibold">OMWP% (ความตึงของคู่แข่ง)</span> ➔ 
+                        <span class="text-cyan-300 font-semibold">OOMWP% (ความตึงของคู่แข่งของคู่แข่ง)</span>
+                    </p>
+                </div>
+                <button onclick="saveAndFinishTournament()" class="admin-only hidden btn-cyber-primary text-slate-950 font-black px-5 py-2.5 rounded-xl text-sm transition">
+                    💾 จบทัวร์นาเมนต์ & บันทึกผล
+                </button>
             </div>
+
             <div class="cyber-card rounded-2xl overflow-hidden">
                 <table class="w-full text-left border-collapse">
-                    <thead class="bg-slate-900/80 text-emerald-400 text-xs uppercase font-mono border-b border-slate-800">
+                    <thead class="bg-slate-900/80 text-emerald-400 text-xs uppercase tracking-wider font-mono border-b border-slate-800">
                         <tr>
                             <th class="p-4"># RANK</th>
                             <th class="p-4">PLAYER</th>
@@ -130,6 +185,8 @@
                             <th class="p-4 text-center">PLAYED</th>
                             <th class="p-4 text-center">W - L - D</th>
                             <th class="p-4 text-center text-emerald-300 font-bold">POINTS</th>
+                            <th class="p-4 text-center cursor-pointer hover:text-emerald-300" onclick="openTiebreakModal()">OMWP% ⓘ</th>
+                            <th class="p-4 text-center cursor-pointer hover:text-emerald-300" onclick="openTiebreakModal()">OOMWP% ⓘ</th>
                         </tr>
                     </thead>
                     <tbody id="standings-table" class="divide-y divide-slate-800/60 text-slate-200 text-sm"></tbody>
@@ -137,213 +194,226 @@
             </div>
         </section>
 
-        <!-- TAB: HISTORY -->
+        <!-- TAB 3: HISTORY (PUBLIC) -->
         <section id="sec-history" class="hidden space-y-4">
             <h2 class="text-xl font-bold text-emerald-400 font-cyber">TOURNAMENT HISTORY</h2>
             <div id="history-list" class="space-y-4"></div>
         </section>
 
-        <!-- TAB: PLAYERS (ADMIN) -->
-        <section id="sec-players" class="admin-only hidden space-y-6">
-            <!-- Tournament Info Setup -->
-            <div class="cyber-card-admin p-6 rounded-2xl space-y-4 border border-emerald-500/30">
-                <h2 class="text-md font-bold text-emerald-400 font-cyber">📋 ข้อมูลทัวร์นาเมนต์รอบนี้</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="text-xs text-slate-400 block mb-1">ชื่อทัวร์นาเมนต์</label>
-                        <input type="text" id="tourney-name-input" onchange="updateTourneyInfo()" placeholder="เช่น T-5 Monthly #1" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100">
-                    </div>
-                    <div>
-                        <label class="text-xs text-slate-400 block mb-1">วันที่จัดแข่งขัน</label>
-                        <input type="date" id="tourney-date-input" onchange="updateTourneyInfo()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Single Player Add -->
-            <div class="cyber-card-admin p-6 rounded-2xl space-y-4">
-                <h2 class="text-md font-bold text-blue-400 font-cyber">👤 เพิ่มรายชื่อนักแข่ง (ทีละคน)</h2>
+        <!-- TAB 4: PLAYERS (ADMIN ONLY) -->
+        <section id="sec-players" class="admin-only hidden space-y-4">
+            <div class="cyber-card-admin p-6 rounded-2xl space-y-4 border border-blue-500/20">
+                <h2 class="text-md font-bold text-blue-400 font-cyber tracking-wider uppercase flex items-center gap-2">
+                    <span>👥</span> ลงทะเบียนนักแข่ง
+                </h2>
                 <div class="flex gap-2">
-                    <input type="text" id="player-name" placeholder="ชื่อผู้แข่งขัน" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm" onkeypress="if(event.key === 'Enter') addPlayer()">
-                    <button onclick="addPlayer()" class="btn-cyber-admin text-white px-5 py-2.5 rounded-xl font-bold text-sm">เพิ่ม</button>
+                    <input type="text" id="player-name" placeholder="ระบุชื่อผู้แข่งขัน / BOT Tag" class="flex-1 bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition text-sm">
+                    <button onclick="addPlayer()" class="btn-cyber-admin text-white px-5 py-2.5 rounded-xl font-bold text-sm transition">เพิ่มผู้เล่น</button>
                 </div>
             </div>
 
-            <!-- Bulk Player Add -->
-            <div class="cyber-card-admin p-6 rounded-2xl space-y-4">
-                <h2 class="text-md font-bold text-teal-400 font-cyber">📜 ลงทะเบียนแบบกลุ่ม (Bulk Import)</h2>
-                <p class="text-xs text-slate-400">วางรายชื่อผู้แข่งขันหลายคน (1 ชื่อ ต่อ 1 บรรทัด)</p>
-                <textarea id="bulk-players" rows="4" placeholder="ชื่อนักแข่ง 1&#10;ชื่อนักแข่ง 2&#10;ชื่อนักแข่ง 3" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-slate-200"></textarea>
-                <button onclick="addBulkPlayers()" class="btn-cyber-primary text-slate-950 font-bold px-5 py-2.5 rounded-xl text-sm">เพิ่มรายชื่อทั้งหมด</button>
-            </div>
-
-            <div class="cyber-card-admin p-6 rounded-2xl">
-                <h3 class="text-sm font-semibold text-slate-300 mb-3">รายชื่อรอบนี้ (<b id="player-count">0</b> คน)</h3>
+            <div class="cyber-card-admin p-6 rounded-2xl border border-slate-800">
+                <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-800">
+                    <h3 class="text-sm font-semibold text-slate-300">รายชื่อนักแข่งรอบนี้</h3>
+                    <span class="text-xs bg-slate-800 text-blue-400 font-mono px-3 py-1 rounded-full border border-slate-700"><b id="player-count">0</b> คน</span>
+                </div>
                 <ul id="player-list" class="divide-y divide-slate-800/60 text-sm"></ul>
             </div>
         </section>
 
-        <!-- TAB: ROUNDS (ADMIN) -->
+        <!-- TAB 5: ROUNDS (ADMIN ONLY) -->
         <section id="sec-rounds" class="admin-only hidden space-y-4">
-            <div class="cyber-card-admin p-4 rounded-2xl flex justify-between items-center">
-                <select id="admin-round-select" onchange="renderAdminPairings()" class="bg-slate-950 border border-slate-700 text-blue-300 rounded-lg px-3 py-1.5 text-xs font-mono"></select>
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center cyber-card-admin p-4 rounded-2xl border border-slate-800 gap-3">
+                <div class="flex items-center gap-3">
+                    <span class="text-xs text-slate-400 font-mono">ROUND:</span>
+                    <select id="admin-round-select" onchange="renderAdminPairings()" class="bg-slate-950 border border-slate-700 text-blue-300 rounded-lg px-3 py-1.5 text-xs font-bold focus:outline-none font-mono"></select>
+                </div>
                 <div class="flex gap-2">
-                    <button onclick="resetCurrentTournament()" class="bg-slate-800 text-red-400 border border-red-500/30 px-3 py-2 rounded-xl text-xs">Reset</button>
-                    <button onclick="generateNextRound()" class="btn-cyber-primary text-slate-950 px-5 py-2 rounded-xl font-bold text-xs">⚡ จับคู่รอบถัดไป</button>
+                    <button onclick="resetCurrentTournament()" class="bg-slate-800/80 hover:bg-red-950/40 text-slate-400 hover:text-red-400 border border-slate-700 hover:border-red-500/40 px-3 py-2 rounded-xl text-xs transition">
+                        Reset ทัวร์
+                    </button>
+                    <button onclick="generateNextRound()" class="btn-cyber-primary text-slate-950 px-5 py-2 rounded-xl font-bold text-xs transition">
+                        ⚡ จับคู่รอบถัดไป
+                    </button>
                 </div>
             </div>
             <div id="pairings-list" class="space-y-3"></div>
         </section>
+
+        <!-- TAB 6: ADMIN MANAGEMENT (ADMIN ONLY) -->
+        <section id="sec-admin-manage" class="admin-only hidden space-y-4">
+            <div class="cyber-card-admin p-6 rounded-2xl space-y-4 border border-slate-800">
+                <h2 class="text-md font-bold text-slate-300 font-cyber tracking-wider uppercase flex items-center gap-2">
+                    <span>👑</span> เพิ่มบัญชี Admin ใหม่
+                </h2>
+                <div class="flex flex-col md:flex-row gap-2">
+                    <input type="text" id="new-admin-user" placeholder="Username" class="flex-1 bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2 text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500">
+                    <input type="password" id="new-admin-pass" placeholder="Password" class="flex-1 bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2 text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500">
+                    <button onclick="createNewAdmin()" class="bg-slate-700 hover:bg-slate-600 text-slate-100 px-5 py-2 rounded-xl font-bold text-xs transition border border-slate-600">สร้าง Admin</button>
+                </div>
+            </div>
+
+            <div class="cyber-card-admin p-6 rounded-2xl border border-slate-800">
+                <h3 class="text-sm font-semibold text-slate-400 mb-3 pb-2 border-b border-slate-800">รายชื่อ Admin ในระบบ</h3>
+                <ul id="admin-list" class="divide-y divide-slate-800/60 text-sm"></ul>
+            </div>
+        </section>
     </div>
 
-    <!-- Login Modal -->
+    <!-- Modal Admin Login -->
     <div id="login-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
         <div class="cyber-card cyber-card-glow p-6 rounded-2xl max-w-sm w-full space-y-5">
             <h3 class="text-lg font-bold text-emerald-400 font-cyber">🔒 ADMIN LOGIN</h3>
-            <input type="text" id="login-user" placeholder="Username" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm">
-            <input type="password" id="login-pass" placeholder="Password" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm">
+            <div class="space-y-3">
+                <input type="text" id="login-user" placeholder="Username" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-emerald-500">
+                <input type="password" id="login-pass" placeholder="Password" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-emerald-500">
+            </div>
             <div class="flex justify-end gap-3">
-                <button onclick="closeLoginModal()" class="text-xs text-slate-400">ยกเลิก</button>
-                <button onclick="submitAdminLogin()" class="btn-cyber-primary text-slate-950 font-black px-5 py-2.5 rounded-xl text-xs">เข้าสู่ระบบ</button>
+                <button onclick="closeLoginModal()" class="px-4 py-2 text-xs text-slate-400 hover:text-slate-200">ยกเลิก</button>
+                <button onclick="submitAdminLogin()" class="btn-cyber-primary text-slate-950 font-black px-5 py-2.5 rounded-xl text-xs transition">เข้าสู่ระบบ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Tiebreak Info -->
+    <div id="tiebreak-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
+        <div class="cyber-card cyber-card-glow p-6 rounded-2xl max-w-lg w-full space-y-4 border border-emerald-500/40">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-lg font-bold text-emerald-400 font-cyber flex items-center gap-2">
+                    <span>📊</span> ค่า Tiebreak คืออะไร?
+                </h3>
+                <button onclick="closeTiebreakModal()" class="text-slate-400 hover:text-slate-100 text-lg">✕</button>
+            </div>
+            
+            <div class="space-y-4 text-xs sm:text-sm text-slate-300 leading-relaxed max-h-[60vh] overflow-y-auto pr-1">
+                <div class="p-3 bg-slate-900/80 rounded-xl border border-emerald-500/20 space-y-1">
+                    <div class="font-bold text-emerald-300 font-mono text-sm">1. POINTS (คะแนนรวม)</div>
+                    <p class="text-slate-400">ชนะ = 3 แต้ม / เสมอ = 1 แต้ม / แพ้ = 0 แต้ม</p>
+                </div>
+                <div class="p-3 bg-slate-900/80 rounded-xl border border-teal-500/20 space-y-1">
+                    <div class="font-bold text-teal-300 font-mono text-sm">2. OMWP% (Opponent Match Win %)</div>
+                    <p class="text-slate-400"><b class="text-slate-200">อัตราการชนะของ "คู่แข่งที่เราเคยเจอมาทั้งหมด"</b> ยิ่งเจอคู่แข่งสายแข็ง ค่านี้จะยิ่งสูงขึ้น</p>
+                </div>
+                <div class="p-3 bg-slate-900/80 rounded-xl border border-cyan-500/20 space-y-1">
+                    <div class="font-bold text-cyan-300 font-mono text-sm">3. OOMWP% (Opponents' Opponent Match Win %)</div>
+                    <p class="text-slate-400"><b class="text-slate-200">อัตราการชนะของ "คู่แข่งของคู่แข่งเรา"</b> ใช้เป็นตัวตัดสินขั้นสุดท้าย</p>
+                </div>
+            </div>
+
+            <div class="pt-2 flex justify-end">
+                <button onclick="closeTiebreakModal()" class="btn-cyber-primary text-slate-950 font-bold px-5 py-2 rounded-xl text-xs">เข้าใจแล้ว</button>
             </div>
         </div>
     </div>
 
     <script>
-        // ==================== Google Sheets Web App URL ====================
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx0fTAjLNIwgDw_QBmBaABq8NTdKLSW3hZyz9QXlWDG97LpPDkHsbu_Mk7QufJ6aKI/exec";
-        // =========================================================================
+        const DEFAULT_ADMINS = [
+            { user: 'admin', pass: 'botsswr2025' },
+            { user: 'adminsen', pass: 'botsswr2025' },
+            { user: 'adminwut', pass: 'botsswr2025' }
+        ];
 
-        let db = {
-            currentTournament: { id: Date.now(), name: 'T-5 Monthly Tournament', date: '', players: [], rounds: [] },
+        let db = JSON.parse(localStorage.getItem('tcg_system_db')) || {
+            currentTournament: { id: Date.now(), name: 'BOT TCG Tournament', players: [], rounds: [] },
             history: [],
-            admins: [{ user: 'admin', pass: 'botsswr2025' }]
+            admins: DEFAULT_ADMINS
         };
+
+        DEFAULT_ADMINS.forEach(defAdmin => {
+            if (!db.admins.some(a => a.user === defAdmin.user)) db.admins.push(defAdmin);
+            else db.admins.find(a => a.user === defAdmin.user).pass = defAdmin.pass;
+        });
 
         let currentAdmin = JSON.parse(sessionStorage.getItem('tcg_active_admin')) || null;
 
-        function loadDB() {
-            const statusEl = document.getElementById('sync-status');
-            if(statusEl) {
-                statusEl.innerText = "⏳ กำลังดึงข้อมูล...";
-                statusEl.className = "text-[10px] font-mono px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30";
-            }
-
-            fetch(WEB_APP_URL)
-                .then(res => res.json())
-                .then(data => {
-                    if (data && data.currentTournament) {
-                        db = data;
-                        if (!db.currentTournament.name) db.currentTournament.name = 'T-5 Monthly Tournament';
-                        if (!db.currentTournament.date) db.currentTournament.date = new Date().toISOString().split('T')[0];
-                    }
-                    if(statusEl) {
-                        statusEl.innerText = "🟢 เชื่อมต่อ Google Sheets สำเร็จ";
-                        statusEl.className = "text-[10px] font-mono px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30";
-                    }
-                    render();
-                })
-                .catch(err => {
-                    console.error(err);
-                    if(statusEl) {
-                        statusEl.innerText = "🔴 เชื่อมต่อ Sheets ไม่สำเร็จ";
-                        statusEl.className = "text-[10px] font-mono px-2.5 py-1 rounded-full bg-red-500/10 text-red-400 border border-red-500/30";
-                    }
-                    render();
-                });
-        }
-
         function saveDB() {
-            const statusEl = document.getElementById('sync-status');
-            if(statusEl) {
-                statusEl.innerText = "💾 กำลังบันทึก...";
-                statusEl.className = "text-[10px] font-mono px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/30";
-            }
-
-            fetch(WEB_APP_URL, {
-                method: 'POST',
-                body: JSON.stringify(db)
-            })
-            .then(res => res.json())
-            .then(res => {
-                if(statusEl) {
-                    statusEl.innerText = "🟢 บันทึกลง Sheets แล้ว";
-                    statusEl.className = "text-[10px] font-mono px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30";
-                }
-                render();
-            })
-            .catch(err => {
-                alert('บันทึกไม่สำเร็จ: ' + err);
-            });
+            localStorage.setItem('tcg_system_db', JSON.stringify(db));
+            render();
         }
-
-        loadDB();
 
         function openLoginModal() { document.getElementById('login-modal').classList.remove('hidden'); }
-        function closeLoginModal() { document.getElementById('login-modal').classList.add('hidden'); }
+        function closeLoginModal() { 
+            document.getElementById('login-modal').classList.add('hidden');
+            document.getElementById('login-user').value = '';
+            document.getElementById('login-pass').value = '';
+        }
+        function openTiebreakModal() { document.getElementById('tiebreak-modal').classList.remove('hidden'); }
+        function closeTiebreakModal() { document.getElementById('tiebreak-modal').classList.add('hidden'); }
 
         function submitAdminLogin() {
             const u = document.getElementById('login-user').value.trim();
             const p = document.getElementById('login-pass').value.trim();
             const found = db.admins.find(a => a.user === u && a.pass === p);
+
             if (found) {
                 currentAdmin = found.user;
                 sessionStorage.setItem('tcg_active_admin', JSON.stringify(currentAdmin));
                 closeLoginModal();
                 render();
-            } else { alert('Username หรือ Password ไม่ถูกต้อง'); }
+            } else {
+                alert('Username หรือ Password ไม่ถูกต้อง');
+            }
         }
 
         function logoutAdmin() {
             currentAdmin = null;
             sessionStorage.removeItem('tcg_active_admin');
+            switchTab('dashboard');
             render();
         }
 
-        function switchTab(tab) {
-            ['dashboard', 'pairings-public', 'standings', 'history', 'players', 'rounds'].forEach(t => {
-                const sec = document.getElementById(`sec-${t}`);
-                if (sec) sec.classList.toggle('hidden', t !== tab);
-            });
+        function createNewAdmin() {
+            const u = document.getElementById('new-admin-user').value.trim();
+            const p = document.getElementById('new-admin-pass').value.trim();
+            if (!u || !p) return alert('กรุณากรอก Username และ Password');
+            if (db.admins.some(a => a.user === u)) return alert('Username นี้มีอยู่ในระบบแล้ว');
+            db.admins.push({ user: u, pass: p });
+            document.getElementById('new-admin-user').value = '';
+            document.getElementById('new-admin-pass').value = '';
+            saveDB();
         }
 
-        function updateTourneyInfo() {
-            const name = document.getElementById('tourney-name-input').value.trim();
-            const dateVal = document.getElementById('tourney-date-input').value;
-            if (name) db.currentTournament.name = name;
-            if (dateVal) {
-                const parts = dateVal.split('-');
-                db.currentTournament.date = `${parts[2]}/${parts[1]}/${parts[0]}`;
+        function removeAdmin(username) {
+            if (db.admins.length <= 1) return alert('ต้องมี Admin อย่างน้อย 1 บัญชีในระบบ');
+            if (confirm(`คุณต้องการลบ Admin "${username}" หรือไม่?`)) {
+                db.admins = db.admins.filter(a => a.user !== username);
+                if (currentAdmin === username) logoutAdmin();
+                else saveDB();
             }
-            saveDB();
+        }
+
+        function switchTab(tab) {
+            const adminTabs = ['players', 'rounds', 'admin-manage'];
+            if (adminTabs.includes(tab) && !currentAdmin) tab = 'dashboard';
+
+            ['dashboard', 'pairings-public', 'standings', 'history', 'players', 'rounds', 'admin-manage'].forEach(t => {
+                const sec = document.getElementById(`sec-${t}`);
+                if (sec) sec.classList.toggle('hidden', t !== tab);
+
+                const btn = document.getElementById(`tab-${t}`);
+                if (btn) {
+                    const isAdminBtn = btn.classList.contains('admin-only');
+                    if (t === tab) {
+                        btn.classList.add('font-bold', 'shadow-sm');
+                        btn.classList.remove('font-medium', 'text-slate-400');
+                        if (isAdminBtn) btn.classList.add('text-blue-400', 'bg-blue-500/10', 'border', 'border-blue-500/30');
+                        else btn.classList.add('text-emerald-400', 'bg-emerald-500/10', 'border', 'border-emerald-500/40');
+                    } else {
+                        btn.classList.remove('font-bold', 'shadow-sm', 'text-blue-400', 'bg-blue-500/10', 'border-blue-500/30', 'text-emerald-400', 'bg-emerald-500/10', 'border-emerald-500/40');
+                        btn.classList.add('font-medium', 'text-slate-400');
+                    }
+                    if (isAdminBtn) btn.classList.toggle('hidden', !currentAdmin);
+                }
+            });
         }
 
         function addPlayer() {
             const input = document.getElementById('player-name');
             const name = input.value.trim();
             if (!name) return;
-            db.currentTournament.players.push({ id: Date.now().toString() + Math.random(), name, isDropped: false });
+            db.currentTournament.players.push({ id: Date.now().toString(), name, isDropped: false });
             input.value = '';
             saveDB();
-        }
-
-        function addBulkPlayers() {
-            const textarea = document.getElementById('bulk-players');
-            const lines = textarea.value.split('\n');
-            let addedCount = 0;
-            lines.forEach(line => {
-                const name = line.trim();
-                if (name) {
-                    db.currentTournament.players.push({ id: Date.now().toString() + Math.random() + addedCount, name, isDropped: false });
-                    addedCount++;
-                }
-            });
-            if (addedCount > 0) {
-                textarea.value = '';
-                saveDB();
-            } else {
-                alert('กรุณากรอกรายชื่ออย่างน้อย 1 คน');
-            }
         }
 
         function removePlayer(id) {
@@ -351,46 +421,87 @@
             saveDB();
         }
 
-        function calculateStandings(tourney) {
+        function toggleDropPlayer(id) {
+            const p = db.currentTournament.players.find(x => x.id === id);
+            if (p) {
+                p.isDropped = !p.isDropped;
+                saveDB();
+            }
+        }
+
+        function calculateStandings(tournament) {
             const stats = {};
-            tourney.players.forEach(p => {
-                stats[p.id] = { id: p.id, name: p.name, isDropped: !!p.isDropped, matchesPlayed: 0, wins: 0, losses: 0, draws: 0, points: 0 };
+            tournament.players.forEach(p => {
+                stats[p.id] = { id: p.id, name: p.name, isDropped: !!p.isDropped, matchesPlayed: 0, wins: 0, losses: 0, draws: 0, points: 0, opponents: [] };
             });
 
-            tourney.rounds.forEach(r => {
+            tournament.rounds.forEach(r => {
                 r.matches.forEach(m => {
                     if (!m.result) return;
                     const p1 = stats[m.p1];
                     const p2 = stats[m.p2];
+
                     if (m.p2 === 'BYE') {
                         if (p1) { p1.wins++; p1.points += 3; p1.matchesPlayed++; }
                         return;
                     }
+
                     if (p1 && p2) {
                         p1.matchesPlayed++; p2.matchesPlayed++;
+                        p1.opponents.push(m.p2); p2.opponents.push(m.p1);
+
                         if (m.result === 'p1') { p1.wins++; p1.points += 3; p2.losses++; }
                         else if (m.result === 'p2') { p2.wins++; p2.points += 3; p1.losses++; }
                         else if (m.result === 'draw') { p1.draws++; p1.points += 1; p2.draws++; p2.points += 1; }
                     }
                 });
             });
-            return Object.values(stats).sort((a, b) => b.points - a.points);
+
+            Object.values(stats).forEach(s => {
+                const maxPts = s.matchesPlayed * 3;
+                s.mwp = maxPts > 0 ? Math.max(s.points / maxPts, 0.33) : 0.33;
+            });
+
+            Object.values(stats).forEach(s => {
+                if (s.opponents.length === 0) { s.omwp = 0.33; return; }
+                const oppMwpSum = s.opponents.reduce((sum, oppId) => sum + (stats[oppId] ? stats[oppId].mwp : 0.33), 0);
+                s.omwp = oppMwpSum / s.opponents.length;
+            });
+
+            Object.values(stats).forEach(s => {
+                if (s.opponents.length === 0) { s.oomwp = 0.33; return; }
+                const oppOmwpSum = s.opponents.reduce((sum, oppId) => sum + (stats[oppId] ? stats[oppId].omwp : 0.33), 0);
+                s.oomwp = oppOmwpSum / s.opponents.length;
+            });
+
+            return Object.values(stats).sort((a, b) => {
+                if (b.points !== a.points) return b.points - a.points;
+                if (b.omwp !== a.omwp) return b.omwp - a.omwp;
+                return b.oomwp - a.oomwp;
+            });
         }
 
         function generateNextRound() {
             const tourney = db.currentTournament;
             const activePlayers = tourney.players.filter(p => !p.isDropped);
-            if (activePlayers.length < 2) return alert('ต้องมีผู้เล่นอย่างน้อย 2 คน');
+            if (activePlayers.length < 2) return alert('ต้องมีผู้เล่นที่ยังแข่งอยู่ (Active) อย่างน้อย 2 คน');
 
-            let pool = activePlayers.map(p => p.id).sort(() => Math.random() - 0.5);
+            const standings = calculateStandings(tourney);
             const currentRound = tourney.rounds.length + 1;
-            const matches = [];
+            
+            let pool = standings.filter(s => !s.isDropped).map(s => s.id);
+            if (currentRound === 1) pool.sort(() => Math.random() - 0.5);
 
+            const matches = [];
             if (pool.length % 2 !== 0) {
-                matches.push({ p1: pool.pop(), p2: 'BYE', result: 'p1' });
+                const byePlayerId = pool.pop(); 
+                matches.push({ p1: byePlayerId, p2: 'BYE', result: 'p1' });
             }
+
             while (pool.length > 0) {
-                matches.push({ p1: pool.shift(), p2: pool.shift(), result: null });
+                const p1 = pool.shift();
+                const p2 = pool.shift();
+                matches.push({ p1, p2, result: null });
             }
 
             tourney.rounds.push({ roundNum: currentRound, matches });
@@ -403,74 +514,247 @@
             saveDB();
         }
 
-        function finishTournament() {
-            const tourney = db.currentTournament;
-            if (tourney.rounds.length === 0) return alert('ไม่มีข้อมูลการแข่งขัน');
-            if (!confirm(`ยืนยันบันทึกทัวร์นาเมนต์ "${tourney.name}" ลงประวัติและ Leaderboard?`)) return;
+        function saveAndFinishTournament() {
+            if (db.currentTournament.rounds.length === 0) return alert('ยังไม่มีข้อมูลการแข่ง');
+            if (!confirm('ยืนยันบันทึกทัวร์นาเมนต์นี้ลงประวัติ?')) return;
 
-            db.history.push({
-                ...tourney,
-                standings: calculateStandings(tourney)
-            });
+            const name = prompt('ตั้งชื่อทัวร์นาเมนต์นี้:', `BOT Tournament #${db.history.length + 1}`);
+            if (!name) return;
 
-            // Reset current tournament with a clean slate
-            db.currentTournament = { 
-                id: Date.now(), 
-                name: 'T-5 Monthly Tournament', 
-                date: new Date().toISOString().split('T')[0].split('-').reverse().join('/'), 
-                players: [], 
-                rounds: [] 
+            const finishedTourney = {
+                ...db.currentTournament,
+                name: name,
+                date: new Date().toLocaleDateString('th-TH'),
+                standings: calculateStandings(db.currentTournament)
             };
-            
+
+            db.history.push(finishedTourney);
+            db.currentTournament = { id: Date.now(), name: 'BOT TCG Tournament', players: [], rounds: [] };
             saveDB();
             switchTab('dashboard');
         }
 
         function resetCurrentTournament() {
-            if (confirm('ล้างข้อมูลการแข่งปัจจุบันทั้งหมด?')) {
-                db.currentTournament = { 
-                    id: Date.now(), 
-                    name: 'T-5 Monthly Tournament', 
-                    date: new Date().toISOString().split('T')[0].split('-').reverse().join('/'), 
-                    players: [], 
-                    rounds: [] 
-                };
+            if (confirm('ล้างข้อมูลการแข่งปัจจุบัน?')) {
+                db.currentTournament = { id: Date.now(), name: 'BOT TCG Tournament', players: [], rounds: [] };
                 saveDB();
             }
         }
 
+        function calculateMonthlyLeaderboard() {
+            const playerTotals = {};
+            db.history.forEach(tourney => {
+                tourney.standings.forEach(s => {
+                    const key = s.name.trim().toLowerCase();
+                    if (!playerTotals[key]) {
+                        playerTotals[key] = { name: s.name, totalPoints: 0, tourneysPlayed: 0, totalWins: 0 };
+                    }
+                    playerTotals[key].totalPoints += s.points;
+                    playerTotals[key].totalWins += s.wins;
+                    playerTotals[key].tourneysPlayed += 1;
+                });
+            });
+
+            return Object.values(playerTotals).sort((a, b) => {
+                if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+                return b.totalWins - a.totalWins;
+            });
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `BOT_TCG_Backup_${Date.now()}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'application/json';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.readAsText(file, 'UTF-8');
+                reader.onload = readerEvent => {
+                    try {
+                        const content = JSON.parse(readerEvent.target.result);
+                        if (content.currentTournament && content.history) {
+                            db = content;
+                            saveDB();
+                            alert('นำเข้าข้อมูลสำเร็จ!');
+                        } else alert('รูปแบบไฟล์ไม่ถูกต้อง');
+                    } catch (err) { alert('เกิดข้อผิดพลาดในการอ่านไฟล์'); }
+                };
+            };
+            input.click();
+        }
+
+        function render() {
+            // Render Header Admin Button
+            const authBtnDiv = document.getElementById('admin-auth-btn');
+            if (currentAdmin) {
+                authBtnDiv.innerHTML = `<button onclick="logoutAdmin()" class="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/40 px-3 py-1.5 rounded-xl text-xs font-semibold transition">🔓 Logout (${currentAdmin})</button>`;
+            } else {
+                authBtnDiv.innerHTML = `<button onclick="openLoginModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-1.5 rounded-xl text-xs font-semibold transition">🔒 Admin Login</button>`;
+            }
+
+            // Toggle Admin Only Elements
+            document.querySelectorAll('.admin-only').forEach(el => {
+                el.classList.toggle('hidden', !currentAdmin);
+            });
+
+            // 1. Dashboard Render
+            const dashTable = document.getElementById('dashboard-table');
+            const leaderboard = calculateMonthlyLeaderboard();
+            if (leaderboard.length === 0) {
+                dashTable.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-500 text-xs">ยังไม่มีประวัติการแข่งขันย้อนหลัง</td></tr>`;
+            } else {
+                dashTable.innerHTML = leaderboard.map((item, idx) => `
+                    <tr class="hover:bg-slate-800/30 transition">
+                        <td class="p-4 font-mono font-bold ${idx === 0 ? 'text-amber-400 text-base' : idx === 1 ? 'text-slate-300' : idx === 2 ? 'text-amber-600' : 'text-slate-500'}">#${idx + 1}</td>
+                        <td class="p-4 font-semibold text-slate-100">${item.name}</td>
+                        <td class="p-4 text-center font-mono text-slate-400">${item.tourneysPlayed}</td>
+                        <td class="p-4 text-center font-mono text-emerald-400">${item.totalWins}</td>
+                        <td class="p-4 text-center font-mono font-bold text-amber-400 text-base">${item.totalPoints}</td>
+                    </tr>
+                `).join('');
+            }
+
+            // 2. Standings Render
+            const standingsTable = document.getElementById('standings-table');
+            const currentStandings = calculateStandings(db.currentTournament);
+            if (currentStandings.length === 0) {
+                standingsTable.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-slate-500 text-xs">ยังไม่มีผู้เข้าร่วมแข่งขัน</td></tr>`;
+            } else {
+                standingsTable.innerHTML = currentStandings.map((s, idx) => `
+                    <tr class="hover:bg-slate-800/30 transition ${s.isDropped ? 'opacity-40 bg-red-950/10' : ''}">
+                        <td class="p-4 font-mono font-bold text-slate-400">#${idx + 1}</td>
+                        <td class="p-4 font-semibold text-slate-100">${s.name} ${s.isDropped ? '<span class="text-xs text-red-400 font-normal">(Dropped)</span>' : ''}</td>
+                        <td class="p-4 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-mono ${s.isDropped ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}">${s.isDropped ? 'DROPPED' : 'ACTIVE'}</span></td>
+                        <td class="p-4 text-center font-mono text-slate-400">${s.matchesPlayed}</td>
+                        <td class="p-4 text-center font-mono text-slate-300">${s.wins} - ${s.losses} - ${s.draws}</td>
+                        <td class="p-4 text-center font-mono font-bold text-emerald-400 text-base">${s.points}</td>
+                        <td class="p-4 text-center font-mono text-teal-300 text-xs">${(s.omwp * 100).toFixed(1)}%</td>
+                        <td class="p-4 text-center font-mono text-cyan-300 text-xs">${(s.oomwp * 100).toFixed(1)}%</td>
+                    </tr>
+                `).join('');
+            }
+
+            // 3. Admin Players Render
+            document.getElementById('player-count').innerText = db.currentTournament.players.length;
+            const playerList = document.getElementById('player-list');
+            playerList.innerHTML = db.currentTournament.players.map(p => `
+                <li class="py-3 flex justify-between items-center gap-2">
+                    <span class="font-medium text-slate-200 ${p.isDropped ? 'line-through text-slate-500' : ''}">${p.name}</span>
+                    <div class="flex items-center gap-2">
+                        <button onclick="toggleDropPlayer('${p.id}')" class="px-2.5 py-1 rounded-lg text-xs font-semibold transition ${p.isDropped ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'}">${p.isDropped ? 'Re-active' : 'Drop'}</button>
+                        <button onclick="removePlayer('${p.id}')" class="bg-red-500/20 text-red-400 border border-red-500/30 px-2.5 py-1 rounded-lg text-xs font-semibold hover:bg-red-500/30 transition">ลบ</button>
+                    </div>
+                </li>
+            `).join('');
+
+            // Update Round Selectors
+            const rounds = db.currentTournament.rounds;
+            const pubSelect = document.getElementById('public-round-select');
+            const admSelect = document.getElementById('admin-round-select');
+            
+            const roundOptions = rounds.length === 0 
+                ? '<option value="">ยังไม่มีรอบการแข่งขัน</option>'
+                : rounds.map((r, i) => `<option value="${i}">ROUND ${r.roundNum}</option>`).join('');
+
+            pubSelect.innerHTML = roundOptions;
+            admSelect.innerHTML = roundOptions;
+
+            if (rounds.length > 0) {
+                pubSelect.value = rounds.length - 1;
+                admSelect.value = rounds.length - 1;
+            }
+
+            renderPublicPairings();
+            renderAdminPairings();
+
+            // 4. History Render
+            const histList = document.getElementById('history-list');
+            if (db.history.length === 0) {
+                histList.innerHTML = `<div class="cyber-card p-8 text-center text-slate-500 text-xs rounded-2xl">ยังไม่มีประวัติทัวร์นาเมนต์ที่จบแล้ว</div>`;
+            } else {
+                histList.innerHTML = db.history.slice().reverse().map(h => `
+                    <div class="cyber-card p-5 rounded-2xl space-y-3">
+                        <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                            <h3 class="font-bold text-emerald-400 font-cyber">${h.name}</h3>
+                            <span class="text-xs font-mono text-slate-400">${h.date}</span>
+                        </div>
+                        <div class="text-xs text-slate-300">
+                            <b>ผู้ชนะอันดับ 1:</b> <span class="text-amber-400 font-bold">${h.standings[0] ? h.standings[0].name : '-'}</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // 5. Admin Manage List Render
+            const adminList = document.getElementById('admin-list');
+            adminList.innerHTML = db.admins.map(a => `
+                <li class="py-2.5 flex justify-between items-center">
+                    <span class="font-mono text-slate-300">👤 ${a.user}</span>
+                    <button onclick="removeAdmin('${a.user}')" class="text-xs text-red-400 hover:text-red-300 font-semibold px-2 py-1 rounded bg-red-500/10 border border-red-500/20">ลบ Admin</button>
+                </li>
+            `).join('');
+        }
+
         function renderPublicPairings() {
-            const tourney = db.currentTournament;
-            const container = document.getElementById('public-pairings-list');
-            const select = document.getElementById('public-round-select');
-            if (!container || tourney.rounds.length === 0) {
-                if(container) container.innerHTML = '<p class="text-xs text-slate-500 p-4">ยังไม่มีการจับคู่ในรอบนี้</p>';
+            const pubList = document.getElementById('public-pairings-list');
+            const roundIdx = document.getElementById('public-round-select').value;
+            const searchText = document.getElementById('public-search-input').value.trim().toLowerCase();
+            const rounds = db.currentTournament.rounds;
+
+            if (roundIdx === "" || !rounds[roundIdx]) {
+                pubList.innerHTML = `<div class="col-span-2 cyber-card p-8 text-center text-slate-500 text-xs rounded-2xl">ยังไม่ได้เริ่มแข่งขันในรอบนี้</div>`;
                 return;
             }
 
-            const selectedIdx = select ? parseInt(select.value) : tourney.rounds.length - 1;
-            const round = tourney.rounds[selectedIdx];
-            const playerMap = {};
-            tourney.players.forEach(p => playerMap[p.id] = p.name);
+            const pMap = {};
+            db.currentTournament.players.forEach(p => pMap[p.id] = p.name);
 
-            container.innerHTML = round.matches.map((m, mIdx) => {
-                const name1 = playerMap[m.p1] || 'Unknown';
-                const name2 = m.p2 === 'BYE' ? 'BYE' : (playerMap[m.p2] || 'Unknown');
+            const matches = rounds[roundIdx].matches;
+            let filteredMatches = matches;
+
+            if (searchText) {
+                filteredMatches = matches.filter((m, idx) => {
+                    const tableNum = (idx + 1).toString();
+                    const name1 = (pMap[m.p1] || '').toLowerCase();
+                    const name2 = (pMap[m.p2] || 'bye').toLowerCase();
+                    return tableNum.includes(searchText) || name1.includes(searchText) || name2.includes(searchText);
+                });
+            }
+
+            if (filteredMatches.length === 0) {
+                pubList.innerHTML = `<div class="col-span-2 cyber-card p-8 text-center text-slate-500 text-xs rounded-2xl">ไม่พบข้อมูลผู้แข่ง หรือ โต๊ะ ที่ค้นหา</div>`;
+                return;
+            }
+
+            pubList.innerHTML = filteredMatches.map((m, originalIdx) => {
+                const idx = matches.indexOf(m);
+                const isP1Win = m.result === 'p1';
+                const isP2Win = m.result === 'p2';
+                const isDraw = m.result === 'draw';
+
                 return `
-                    <div class="cyber-card p-4 rounded-xl flex items-center justify-between border border-slate-800">
-                        <div class="flex items-center gap-3">
-                            <span class="text-xs text-emerald-400 font-mono font-bold">TABLE ${mIdx + 1}</span>
-                            <div class="text-sm font-semibold text-slate-100 flex items-center gap-2">
-                                <span class="${m.result === 'p1' ? 'text-emerald-400 font-bold' : ''}">${name1}</span>
-                                <span class="text-slate-500 text-xs font-mono">vs</span>
-                                <span class="${m.result === 'p2' ? 'text-emerald-400 font-bold' : ''}">${name2}</span>
-                            </div>
+                    <div class="cyber-card p-4 rounded-xl space-y-3 relative overflow-hidden transition-all ${searchText ? 'highlight-match' : ''}">
+                        <div class="flex justify-between items-center border-b border-slate-800/80 pb-2">
+                            <span class="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-md">TABLE ${idx + 1}</span>
+                            <span class="text-[10px] font-mono ${m.result ? 'text-slate-400' : 'text-amber-400 animate-pulse'}">${m.result ? 'MATCH FINISHED' : 'IN PROGRESS'}</span>
                         </div>
-                        <div>
-                            ${m.result === 'p1' ? `<span class="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-1 rounded">${name1} ชนะ</span>` : ''}
-                            ${m.result === 'p2' ? `<span class="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-1 rounded">${name2} ชนะ</span>` : ''}
-                            ${m.result === 'draw' ? `<span class="text-xs bg-amber-500/20 text-amber-300 px-2 py-1 rounded">เสมอ</span>` : ''}
-                            ${!m.result && m.p2 !== 'BYE' ? `<span class="text-xs text-slate-500">กำลังแข่ง</span>` : ''}
+                        <div class="grid grid-cols-2 gap-2 text-sm font-medium">
+                            <div class="p-2.5 rounded-lg border ${isP1Win ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300 font-bold' : isDraw ? 'bg-amber-500/10 border-amber-500/30 text-amber-300' : 'bg-slate-950/60 border-slate-800 text-slate-200'}">
+                                ${pMap[m.p1] || m.p1} ${isP1Win ? '👑' : ''}
+                            </div>
+                            <div class="p-2.5 rounded-lg border ${isP2Win ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300 font-bold' : isDraw ? 'bg-amber-500/10 border-amber-500/30 text-amber-300' : 'bg-slate-950/60 border-slate-800 text-slate-200'}">
+                                ${pMap[m.p2] || m.p2} ${isP2Win ? '👑' : ''}
+                            </div>
                         </div>
                     </div>
                 `;
@@ -478,125 +762,41 @@
         }
 
         function renderAdminPairings() {
-            const tourney = db.currentTournament;
-            const container = document.getElementById('pairings-list');
-            const select = document.getElementById('admin-round-select');
-            if (!container || tourney.rounds.length === 0) {
-                if(container) container.innerHTML = '<p class="text-xs text-slate-500">ยังไม่ได้สร้างรอบการแข่ง</p>';
+            const admList = document.getElementById('pairings-list');
+            const roundIdx = document.getElementById('admin-round-select').value;
+            const rounds = db.currentTournament.rounds;
+
+            if (roundIdx === "" || !rounds[roundIdx]) {
+                admList.innerHTML = `<div class="cyber-card-admin p-8 text-center text-slate-500 text-xs rounded-2xl">ยังไม่มีรอบการแข่งขัน กด "จับคู่รอบถัดไป" ด้านบนเพื่อเริ่ม</div>`;
                 return;
             }
 
-            const selectedIdx = select ? parseInt(select.value) : tourney.rounds.length - 1;
-            const round = tourney.rounds[selectedIdx];
-            const playerMap = {};
-            tourney.players.forEach(p => playerMap[p.id] = p.name);
+            const pMap = {};
+            db.currentTournament.players.forEach(p => pMap[p.id] = p.name);
 
-            container.innerHTML = round.matches.map((m, mIdx) => {
-                const name1 = playerMap[m.p1] || 'Unknown';
-                const name2 = m.p2 === 'BYE' ? 'BYE' : (playerMap[m.p2] || 'Unknown');
-                return `
-                    <div class="cyber-card p-4 rounded-xl flex justify-between items-center border border-slate-800">
-                        <div class="text-sm font-semibold text-slate-200">${name1} vs ${name2}</div>
-                        ${m.p2 === 'BYE' ? '<span class="text-xs text-emerald-400">BYE</span>' : `
-                            <div class="flex gap-1">
-                                <button onclick="setResult(${selectedIdx}, ${mIdx}, 'p1')" class="px-2.5 py-1 text-xs rounded bg-slate-800 ${m.result === 'p1' ? 'bg-emerald-500 text-slate-950 font-bold' : ''}">${name1} ชนะ</button>
-                                <button onclick="setResult(${selectedIdx}, ${mIdx}, 'draw')" class="px-2.5 py-1 text-xs rounded bg-slate-800 ${m.result === 'draw' ? 'bg-amber-500 text-slate-950 font-bold' : ''}">เสมอ</button>
-                                <button onclick="setResult(${selectedIdx}, ${mIdx}, 'p2')" class="px-2.5 py-1 text-xs rounded bg-slate-800 ${m.result === 'p2' ? 'bg-emerald-500 text-slate-950 font-bold' : ''}">${name2} ชนะ</button>
-                            </div>
-                        `}
+            admList.innerHTML = rounds[roundIdx].matches.map((m, mIdx) => `
+                <div class="cyber-card-admin p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border border-slate-800">
+                    <div class="flex items-center gap-3 w-full sm:w-auto">
+                        <span class="text-xs font-mono font-bold bg-slate-900 border border-slate-700 text-blue-400 px-2.5 py-1 rounded-md">T${mIdx + 1}</span>
+                        <div class="text-sm font-semibold text-slate-200 flex items-center gap-2 flex-1">
+                            <span>${pMap[m.p1] || m.p1}</span>
+                            <span class="text-xs text-slate-500">VS</span>
+                            <span>${pMap[m.p2] || m.p2}</span>
+                        </div>
                     </div>
-                `;
-            }).join('');
-        }
-
-        function render() {
-            const isAdmin = !!currentAdmin;
-            document.querySelectorAll('.admin-only').forEach(el => el.classList.toggle('hidden', !isAdmin));
-
-            const authBtn = document.getElementById('admin-auth-btn');
-            if (authBtn) {
-                authBtn.innerHTML = isAdmin ? 
-                    `<button onclick="logoutAdmin()" class="bg-slate-800 text-blue-300 px-3 py-1.5 rounded-xl text-xs">👤 Logout</button>` :
-                    `<button onclick="openLoginModal()" class="bg-slate-800 text-slate-300 px-4 py-2 rounded-xl text-xs">🔒 Admin Login</button>`;
-            }
-
-            const tourney = db.currentTournament;
-            
-            // Set inputs value if not focused
-            const nameInput = document.getElementById('tourney-name-input');
-            const dateInput = document.getElementById('tourney-date-input');
-            if (nameInput && document.activeElement !== nameInput) nameInput.value = tourney.name || '';
-            if (dateInput && document.activeElement !== dateInput && tourney.date) {
-                const parts = tourney.date.split('/');
-                if(parts.length === 3) dateInput.value = `${parts[2]}-${parts[1]}-${parts[0]}`;
-            }
-
-            const titleDisplay = document.getElementById('current-tourney-title-display');
-            if(titleDisplay) titleDisplay.innerText = `CURRENT STANDINGS: ${tourney.name || 'Tournament'}`;
-
-            ['public-round-select', 'admin-round-select'].forEach(id => {
-                const sel = document.getElementById(id);
-                if (sel && tourney.rounds.length > 0) {
-                    const val = sel.value;
-                    sel.innerHTML = tourney.rounds.map((r, i) => `<option value="${i}">Round ${r.roundNum}</option>`).join('');
-                    if (tourney.rounds[val]) sel.value = val;
-                }
-            });
-
-            document.getElementById('player-count').innerText = tourney.players.length;
-            document.getElementById('player-list').innerHTML = tourney.players.map(p => `
-                <li class="py-2.5 flex justify-between items-center text-slate-300">
-                    <span>${p.name}</span>
-                    <button onclick="removePlayer('${p.id}')" class="text-xs text-red-400">ลบ</button>
-                </li>
-            `).join('');
-
-            renderPublicPairings();
-            renderAdminPairings();
-
-            // Standings
-            const standings = calculateStandings(tourney);
-            document.getElementById('standings-table').innerHTML = standings.map((s, idx) => `
-                <tr class="hover:bg-slate-800/30">
-                    <td class="p-4 font-mono font-bold text-slate-400">#${idx + 1}</td>
-                    <td class="p-4 font-bold text-slate-100">${s.name}</td>
-                    <td class="p-4 text-center text-xs text-emerald-400">ACTIVE</td>
-                    <td class="p-4 text-center font-mono text-slate-400">${s.matchesPlayed}</td>
-                    <td class="p-4 text-center font-mono">${s.wins} - ${s.losses} - ${s.draws}</td>
-                    <td class="p-4 text-center font-mono font-extrabold text-emerald-400">${s.points}</td>
-                </tr>
-            `).join('');
-
-            // Monthly Dashboard Leaderboard
-            const playerTotals = {};
-            db.history.forEach(h => {
-                h.standings.forEach(s => {
-                    const key = s.name.trim().toLowerCase();
-                    if (!playerTotals[key]) playerTotals[key] = { name: s.name, totalPoints: 0, tourneysPlayed: 0, totalWins: 0 };
-                    playerTotals[key].totalPoints += s.points;
-                    playerTotals[key].totalWins += s.wins;
-                    playerTotals[key].tourneysPlayed += 1;
-                });
-            });
-            const lb = Object.values(playerTotals).sort((a, b) => b.totalPoints - a.totalPoints);
-            document.getElementById('dashboard-table').innerHTML = lb.map((item, idx) => `
-                <tr class="hover:bg-slate-800/30">
-                    <td class="p-4 font-mono font-bold text-amber-400">#${idx + 1}</td>
-                    <td class="p-4 font-bold text-slate-100">${item.name}</td>
-                    <td class="p-4 text-center font-mono text-slate-400">${item.tourneysPlayed} ทัวร์</td>
-                    <td class="p-4 text-center font-mono text-slate-300">${item.totalWins}</td>
-                    <td class="p-4 text-center font-mono font-extrabold text-amber-400">${item.totalPoints}</td>
-                </tr>
-            `).join('');
-
-            // History
-            document.getElementById('history-list').innerHTML = db.history.slice().reverse().map(h => `
-                <div class="cyber-card p-5 rounded-2xl space-y-2">
-                    <h3 class="font-bold text-emerald-400 font-cyber">${h.name} (${h.date || '-'})</h3>
-                    <p class="text-xs text-slate-400">แชมป์: <b class="text-amber-400">${h.standings[0] ? h.standings[0].name : '-'}</b></p>
+                    ${m.p2 === 'BYE' ? '<span class="text-xs font-mono text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-lg">AUTO WIN (BYE)</span>' : `
+                        <div class="flex items-center gap-1.5 w-full sm:w-auto justify-end">
+                            <button onclick="setResult(${roundIdx}, ${mIdx}, 'p1')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition border ${m.result === 'p1' ? 'bg-emerald-500 text-slate-950 border-emerald-400' : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-slate-500'}">P1 ชนะ</button>
+                            <button onclick="setResult(${roundIdx}, ${mIdx}, 'draw')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition border ${m.result === 'draw' ? 'bg-amber-500 text-slate-950 border-amber-400' : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-slate-500'}">เสมอ</button>
+                            <button onclick="setResult(${roundIdx}, ${mIdx}, 'p2')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition border ${m.result === 'p2' ? 'bg-emerald-500 text-slate-950 border-emerald-400' : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-slate-500'}">P2 ชนะ</button>
+                        </div>
+                    `}
                 </div>
             `).join('');
         }
+
+        // Initialize Application
+        render();
     </script>
 </body>
 </html>
