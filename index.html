@@ -131,11 +131,23 @@
 
         <!-- TAB PUBLIC: CURRENT PAIRINGS & TABLES -->
         <section id="sec-pairings-public" class="hidden space-y-4">
+            <!-- 1. HEADER แสดงชื่อทัวร์ และ วันที่ -->
+            <div class="cyber-card cyber-card-glow p-6 rounded-2xl text-center relative overflow-hidden space-y-2 border border-emerald-500/40">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                <h2 id="pairings-tourney-name" class="text-2xl md:text-3xl font-extrabold text-emerald-400 font-cyber tracking-wide uppercase">
+                    BOT TCG TOURNAMENT
+                </h2>
+                <div id="pairings-tourney-date-wrap" class="inline-block">
+                    <span id="pairings-tourney-date" class="bg-slate-900/80 border border-emerald-500/30 text-emerald-300 font-mono text-xs px-4 py-1.5 rounded-full shadow-inner">
+                        📅 วันที่แข่งขัน: -
+                    </span>
+                </div>
+            </div>
+
+            <!-- 2. Controls & Search Bar -->
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center cyber-card p-5 rounded-2xl gap-4">
                 <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                    <h2 class="text-xl font-bold text-emerald-400 font-cyber">
-                        🎯 PAIRINGS
-                    </h2>
+                    <h3 class="text-lg font-bold text-slate-200 font-cyber">🎯 MATCH PAIRINGS</h3>
                     <select id="public-round-select" onchange="renderPublicPairings()" class="bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-500 font-mono"></select>
                 </div>
 
@@ -149,6 +161,7 @@
                 </div>
             </div>
 
+            <!-- 3. Pairings Cards List -->
             <div id="public-pairings-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
         </section>
 
@@ -208,11 +221,11 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                         <label class="text-xs text-slate-400 block mb-1">ชื่อรายการแข่งขัน</label>
-                        <input type="text" id="setup-tourney-name" onchange="updateTourneyInfo()" placeholder="เช่น BOT TCG Weekly #15" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm">
+                        <input type="text" id="setup-tourney-name" onchange="updateTourneyInfo()" onkeyup="updateTourneyInfo()" placeholder="เช่น BOT TCG Weekly #15" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm">
                     </div>
                     <div>
                         <label class="text-xs text-slate-400 block mb-1">วันที่จัด / สถานที่</label>
-                        <input type="text" id="setup-tourney-date" onchange="updateTourneyInfo()" placeholder="เช่น 28/03/2026 @ ตลิ่งชัน" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm">
+                        <input type="text" id="setup-tourney-date" onchange="updateTourneyInfo()" onkeyup="updateTourneyInfo()" placeholder="เช่น 28/03/2026 @ ตลิ่งชัน" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm">
                     </div>
                 </div>
             </div>
@@ -448,11 +461,30 @@
 
         /* --- TOURNAMENT SETUP & PLAYER MANAGEMENT --- */
         function updateTourneyInfo() {
-            const name = document.getElementById('setup-tourney-name').value.trim();
-            const date = document.getElementById('setup-tourney-date').value.trim();
-            db.currentTournament.name = name || 'BOT TCG Tournament';
-            db.currentTournament.date = date || new Date().toLocaleDateString('th-TH');
+            const nameInput = document.getElementById('setup-tourney-name');
+            const dateInput = document.getElementById('setup-tourney-date');
+            
+            db.currentTournament.name = nameInput ? nameInput.value.trim() || 'BOT TCG Tournament' : 'BOT TCG Tournament';
+            db.currentTournament.date = dateInput ? dateInput.value.trim() : '';
+            
             saveDB();
+            updatePairingsHeaderUI();
+        }
+
+        function updatePairingsHeaderUI() {
+            const nameEl = document.getElementById('pairings-tourney-name');
+            const dateEl = document.getElementById('pairings-tourney-date');
+            const dateWrap = document.getElementById('pairings-tourney-date-wrap');
+
+            if (nameEl) nameEl.innerText = db.currentTournament.name || "BOT TCG TOURNAMENT";
+            if (dateEl && dateWrap) {
+                if (db.currentTournament.date) {
+                    dateEl.innerText = `📅 วันที่แข่งขัน: ${db.currentTournament.date}`;
+                    dateWrap.classList.remove('hidden');
+                } else {
+                    dateWrap.classList.add('hidden');
+                }
+            }
         }
 
         function toggleAddMode(mode) {
@@ -508,8 +540,8 @@
         function editPlayerName(id) {
             const p = db.currentTournament.players.find(x => x.id === id);
             if (!p) return;
-            const newName = prompt('แก้ไขชื่อผู้แข่งขัน:', p.name);
-            if (newName && newName.trim() !== '') {
+            const newName = prompt('แก้ไขชื่อนักแข่ง:', p.name);
+            if (newName && newName.trim()) {
                 p.name = newName.trim();
                 saveDB();
             }
@@ -529,57 +561,99 @@
         }
 
         function clearAllPlayers() {
-            if (db.currentTournament.players.length === 0) return;
-            if (confirm('คุณแน่ใจหรือไม่ว่าต้องการล้างรายชื่อผู้แข่งทั้งหมดในทัวร์นี้?')) {
+            if (confirm('คุณต้องการลบรายชื่อนักแข่งทั้งหมดในทัวร์นี้หรือไม่?')) {
                 db.currentTournament.players = [];
+                db.currentTournament.rounds = [];
                 saveDB();
             }
         }
 
-        /* --- TOURNAMENT ENGINE & TIEBREAK --- */
-        function calculateStandings(tournament) {
-            const stats = {};
-            tournament.players.forEach(p => {
-                stats[p.id] = { id: p.id, name: p.name, isDropped: !!p.isDropped, matchesPlayed: 0, wins: 0, losses: 0, draws: 0, points: 0, opponents: [] };
+        /* --- TIEBREAK & STANDINGS CALCULATIONS --- */
+        function calculateStandings() {
+            const players = db.currentTournament.players;
+            const rounds = db.currentTournament.rounds;
+
+            let stats = {};
+            players.forEach(p => {
+                stats[p.id] = {
+                    id: p.id,
+                    name: p.name,
+                    isDropped: p.isDropped,
+                    played: 0,
+                    wins: 0,
+                    losses: 0,
+                    draws: 0,
+                    points: 0,
+                    opponents: [],
+                    omwp: 0,
+                    oomwp: 0
+                };
             });
 
-            tournament.rounds.forEach(r => {
+            rounds.forEach(r => {
                 r.matches.forEach(m => {
-                    if (!m.result) return;
-                    const p1 = stats[m.p1];
-                    const p2 = stats[m.p2];
+                    if (m.player2 === 'BYE') {
+                        if (stats[m.player1]) {
+                            stats[m.player1].played += 1;
+                            stats[m.player1].wins += 1;
+                            stats[m.player1].points += 3;
+                        }
+                    } else if (m.result) {
+                        const p1 = stats[m.player1];
+                        const p2 = stats[m.player2];
+                        if (p1 && p2) {
+                            p1.played += 1;
+                            p2.played += 1;
+                            p1.opponents.push(p2.id);
+                            p2.opponents.push(p1.id);
 
-                    if (m.p2 === 'BYE') {
-                        if (p1) { p1.wins++; p1.points += 3; p1.matchesPlayed++; }
-                        return;
-                    }
-
-                    if (p1 && p2) {
-                        p1.matchesPlayed++; p2.matchesPlayed++;
-                        p1.opponents.push(m.p2); p2.opponents.push(m.p1);
-
-                        if (m.result === 'p1') { p1.wins++; p1.points += 3; p2.losses++; }
-                        else if (m.result === 'p2') { p2.wins++; p2.points += 3; p1.losses++; }
-                        else if (m.result === 'draw') { p1.draws++; p1.points += 1; p2.draws++; p2.points += 1; }
+                            if (m.result === '1-0') {
+                                p1.wins += 1; p1.points += 3;
+                                p2.losses += 1;
+                            } else if (m.result === '0-1') {
+                                p2.wins += 1; p2.points += 3;
+                                p1.losses += 1;
+                            } else if (m.result === '0.5-0.5') {
+                                p1.draws += 1; p1.points += 1;
+                                p2.draws += 1; p2.points += 1;
+                            }
+                        }
                     }
                 });
             });
 
+            // Calculate OMWP%
             Object.values(stats).forEach(s => {
-                const maxPts = s.matchesPlayed * 3;
-                s.mwp = maxPts > 0 ? Math.max(s.points / maxPts, 0.33) : 0.33;
+                if (s.opponents.length === 0) {
+                    s.omwp = 0.33;
+                } else {
+                    let totalOppWinPct = 0;
+                    s.opponents.forEach(oppId => {
+                        const opp = stats[oppId];
+                        if (opp && opp.played > 0) {
+                            let winPct = opp.points / (opp.played * 3);
+                            if (winPct < 0.33) winPct = 0.33;
+                            totalOppWinPct += winPct;
+                        } else {
+                            totalOppWinPct += 0.33;
+                        }
+                    });
+                    s.omwp = totalOppWinPct / s.opponents.length;
+                }
             });
 
+            // Calculate OOMWP%
             Object.values(stats).forEach(s => {
-                if (s.opponents.length === 0) { s.omwp = 0.33; return; }
-                const oppMwpSum = s.opponents.reduce((sum, oppId) => sum + (stats[oppId] ? stats[oppId].mwp : 0.33), 0);
-                s.omwp = oppMwpSum / s.opponents.length;
-            });
-
-            Object.values(stats).forEach(s => {
-                if (s.opponents.length === 0) { s.oomwp = 0.33; return; }
-                const oppOmwpSum = s.opponents.reduce((sum, oppId) => sum + (stats[oppId] ? stats[oppId].omwp : 0.33), 0);
-                s.oomwp = oppOmwpSum / s.opponents.length;
+                if (s.opponents.length === 0) {
+                    s.oomwp = 0.33;
+                } else {
+                    let totalOppOmwp = 0;
+                    s.opponents.forEach(oppId => {
+                        const opp = stats[oppId];
+                        totalOppOmwp += opp ? opp.omwp : 0.33;
+                    });
+                    s.oomwp = totalOppOmwp / s.opponents.length;
+                }
             });
 
             return Object.values(stats).sort((a, b) => {
@@ -589,91 +663,117 @@
             });
         }
 
+        /* --- SWISS PAIRINGS GENERATOR --- */
         function generateNextRound() {
-            const tourney = db.currentTournament;
-            const activePlayers = tourney.players.filter(p => !p.isDropped);
-            if (activePlayers.length < 2) return alert('ต้องมีผู้เล่นที่ยังแข่งอยู่ (Active) อย่างน้อย 2 คน');
+            const activePlayers = db.currentTournament.players.filter(p => !p.isDropped);
+            if (activePlayers.length < 2) return alert('ต้องมีนักแข่งอย่างน้อย 2 คนที่ยังไม่ออกจากทัวร์');
 
-            const standings = calculateStandings(tourney);
-            const currentRound = tourney.rounds.length + 1;
-            
-            let pool = standings.filter(s => !s.isDropped).map(s => s.id);
-            if (currentRound === 1) pool.sort(() => Math.random() - 0.5);
+            const standings = calculateStandings().filter(s => !s.isDropped);
+            let pool = [...standings];
+            let matches = [];
+            let tableNum = 1;
 
-            const matches = [];
+            // Handle Odd Player Count -> BYE
             if (pool.length % 2 !== 0) {
-                const byePlayerId = pool.pop(); 
-                matches.push({ p1: byePlayerId, p2: 'BYE', result: 'p1' });
+                let byeIndex = pool.length - 1;
+                for (let i = pool.length - 1; i >= 0; i--) {
+                    const hasByeBefore = db.currentTournament.rounds.some(r => 
+                        r.matches.some(m => m.player1 === pool[i].id && m.player2 === 'BYE')
+                    );
+                    if (!hasByeBefore) {
+                        byeIndex = i;
+                        break;
+                    }
+                }
+                const byePlayer = pool.splice(byeIndex, 1)[0];
+                matches.push({
+                    table: 'BYE',
+                    player1: byePlayer.id,
+                    player2: 'BYE',
+                    result: '1-0'
+                });
             }
 
+            // Pair remaining players
             while (pool.length > 0) {
                 const p1 = pool.shift();
-                const p2 = pool.shift();
-                matches.push({ p1, p2, result: null });
+                let pairedIndex = -1;
+
+                for (let i = 0; i < pool.length; i++) {
+                    const p2 = pool[i];
+                    const alreadyPlayed = db.currentTournament.rounds.some(r =>
+                        r.matches.some(m => 
+                            (m.player1 === p1.id && m.player2 === p2.id) ||
+                            (m.player1 === p2.id && m.player2 === p1.id)
+                        )
+                    );
+                    if (!alreadyPlayed) {
+                        pairedIndex = i;
+                        break;
+                    }
+                }
+
+                if (pairedIndex === -1) pairedIndex = 0;
+
+                const p2 = pool.splice(pairedIndex, 1)[0];
+                matches.push({
+                    table: tableNum++,
+                    player1: p1.id,
+                    player2: p2.id,
+                    result: ''
+                });
             }
 
-            tourney.rounds.push({ roundNum: currentRound, matches });
+            db.currentTournament.rounds.push({
+                roundNum: db.currentTournament.rounds.length + 1,
+                matches: matches
+            });
+
             saveDB();
-            switchTab('rounds');
+            renderPublicPairings();
         }
 
-        function setResult(roundIdx, matchIdx, result) {
+        function setMatchResult(roundIdx, matchIdx, result) {
             db.currentTournament.rounds[roundIdx].matches[matchIdx].result = result;
             saveDB();
         }
 
-        function saveAndFinishTournament() {
-            if (db.currentTournament.rounds.length === 0) return alert('ยังไม่มีข้อมูลการแข่ง');
-            if (!confirm('ยืนยันบันทึกทัวร์นาเมนต์นี้ลงประวัติ?')) return;
-
-            const name = db.currentTournament.name || prompt('ตั้งชื่อทัวร์นาเมนต์นี้:', `BOT Tournament #${db.history.length + 1}`);
-            if (!name) return;
-
-            const finishedTourney = {
-                ...db.currentTournament,
-                name: name,
-                date: db.currentTournament.date || new Date().toLocaleDateString('th-TH'),
-                standings: calculateStandings(db.currentTournament)
-            };
-
-            db.history.push(finishedTourney);
-            db.currentTournament = { id: Date.now(), name: 'BOT TCG Tournament', date: '', players: [], rounds: [] };
-            saveDB();
-            switchTab('dashboard');
-        }
-
         function resetCurrentTournament() {
-            if (confirm('ล้างข้อมูลการแข่งปัจจุบัน?')) {
-                db.currentTournament = { id: Date.now(), name: 'BOT TCG Tournament', date: '', players: [], rounds: [] };
+            if (confirm('คุณแน่ใจหรือไม่ที่จะรีเซ็ตข้อมูลรอบและการจับคู่ทั้งหมดของทัวร์นี้?')) {
+                db.currentTournament.rounds = [];
                 saveDB();
             }
         }
 
-        function calculateMonthlyLeaderboard() {
-            const playerTotals = {};
-            db.history.forEach(tourney => {
-                tourney.standings.forEach(s => {
-                    const key = s.name.trim().toLowerCase();
-                    if (!playerTotals[key]) {
-                        playerTotals[key] = { name: s.name, totalPoints: 0, tourneysPlayed: 0, totalWins: 0 };
-                    }
-                    playerTotals[key].totalPoints += s.points;
-                    playerTotals[key].totalWins += s.wins;
-                    playerTotals[key].tourneysPlayed += 1;
+        function saveAndFinishTournament() {
+            if (db.currentTournament.rounds.length === 0) return alert('ยังไม่มีรอบการแข่งขันให้บันทึก');
+            if (confirm('คุณต้องการจบทัวร์นาเมนต์นี้ และบันทึกคะแนนสะสมเข้าสู่ Leaderboard ประจำเดือนใช่หรือไม่?')) {
+                db.history.unshift({
+                    id: db.currentTournament.id,
+                    name: db.currentTournament.name,
+                    date: db.currentTournament.date,
+                    standings: calculateStandings()
                 });
-            });
 
-            return Object.values(playerTotals).sort((a, b) => {
-                if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
-                return b.totalWins - a.totalWins;
-            });
+                db.currentTournament = {
+                    id: Date.now(),
+                    name: 'BOT TCG Tournament',
+                    date: new Date().toLocaleDateString('th-TH'),
+                    players: [],
+                    rounds: []
+                };
+
+                saveDB();
+                switchTab('dashboard');
+            }
         }
 
+        /* --- EXPORT / IMPORT DATA --- */
         function exportData() {
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db));
             const downloadAnchor = document.createElement('a');
             downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", `BOT_TCG_Backup_${Date.now()}.json`);
+            downloadAnchor.setAttribute("download", `bottcg_backup_${Date.now()}.json`);
             document.body.appendChild(downloadAnchor);
             downloadAnchor.click();
             downloadAnchor.remove();
@@ -686,231 +786,333 @@
             input.onchange = e => {
                 const file = e.target.files[0];
                 const reader = new FileReader();
-                reader.readAsText(file, 'UTF-8');
-                reader.onload = readerEvent => {
+                reader.onload = event => {
                     try {
-                        const content = JSON.parse(readerEvent.target.result);
-                        if (content.currentTournament && content.history) {
-                            db = content;
-                            saveDB();
-                            alert('นำเข้าข้อมูลสำเร็จ!');
-                        } else alert('รูปแบบไฟล์ไม่ถูกต้อง');
-                    } catch (err) { alert('เกิดข้อผิดพลาดในการอ่านไฟล์'); }
+                        db = JSON.parse(event.target.result);
+                        saveDB();
+                        alert('นำเข้าข้อมูลเรียบร้อยแล้ว!');
+                    } catch (err) {
+                        alert('ไฟล์ JSON ไม่ถูกต้อง');
+                    }
                 };
+                reader.readAsText(file);
             };
             input.click();
         }
 
+        /* --- RENDER LOGIC --- */
         function render() {
-            // Render Header Admin Button
-            const authBtnDiv = document.getElementById('admin-auth-btn');
+            renderAdminAuthBtn();
+            renderDashboard();
+            renderStandings();
+            renderHistory();
+            renderAdminManage();
+            renderPlayerList();
+            renderRoundSelects();
+            renderPublicPairings();
+            renderAdminPairings();
+        }
+
+        function renderAdminAuthBtn() {
+            const container = document.getElementById('admin-auth-btn');
             if (currentAdmin) {
-                authBtnDiv.innerHTML = `<button onclick="logoutAdmin()" class="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/40 px-3 py-1.5 rounded-xl text-xs font-semibold transition">🔓 Logout (${currentAdmin})</button>`;
+                container.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-blue-400 font-mono">👑 ${currentAdmin}</span>
+                        <button onclick="logoutAdmin()" class="bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 px-3 py-1.5 rounded-xl text-xs font-semibold transition">
+                            ออกจากระบบ
+                        </button>
+                    </div>
+                `;
             } else {
-                authBtnDiv.innerHTML = `<button onclick="openLoginModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-1.5 rounded-xl text-xs font-semibold transition">🔒 Admin Login</button>`;
+                container.innerHTML = `
+                    <button onclick="openLoginModal()" class="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-xl text-xs font-semibold border border-slate-700 text-slate-300 transition shadow-sm">
+                        🔒 Admin Login
+                    </button>
+                `;
             }
 
-            // Toggle Admin Only Elements
             document.querySelectorAll('.admin-only').forEach(el => {
                 el.classList.toggle('hidden', !currentAdmin);
             });
+        }
 
-            // 1. Dashboard Render
-            const dashTable = document.getElementById('dashboard-table');
-            const leaderboard = calculateMonthlyLeaderboard();
-            if (leaderboard.length === 0) {
-                dashTable.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-500 text-xs">ยังไม่มีประวัติการแข่งขันย้อนหลัง</td></tr>`;
-            } else {
-                dashTable.innerHTML = leaderboard.map((item, idx) => `
-                    <tr class="hover:bg-slate-800/30 transition">
-                        <td class="p-4 font-mono font-bold ${idx === 0 ? 'text-amber-400 text-base' : idx === 1 ? 'text-slate-300' : idx === 2 ? 'text-amber-600' : 'text-slate-500'}">#${idx + 1}</td>
-                        <td class="p-4 font-semibold text-slate-100">${item.name}</td>
-                        <td class="p-4 text-center font-mono text-slate-400">${item.tourneysPlayed}</td>
-                        <td class="p-4 text-center font-mono text-emerald-400">${item.totalWins}</td>
-                        <td class="p-4 text-center font-mono font-bold text-amber-400 text-base">${item.totalPoints}</td>
+        function renderDashboard() {
+            const tbody = document.getElementById('dashboard-table');
+            let overallStats = {};
+
+            db.history.forEach(h => {
+                h.standings.forEach(s => {
+                    if (!overallStats[s.name]) {
+                        overallStats[s.name] = { name: s.name, matches: 0, wins: 0, points: 0 };
+                    }
+                    overallStats[s.name].matches += s.played;
+                    overallStats[s.name].wins += s.wins;
+                    overallStats[s.name].points += s.points;
+                });
+            });
+
+            calculateStandings().forEach(s => {
+                if (s.played > 0) {
+                    if (!overallStats[s.name]) {
+                        overallStats[s.name] = { name: s.name, matches: 0, wins: 0, points: 0 };
+                    }
+                    overallStats[s.name].matches += s.played;
+                    overallStats[s.name].wins += s.wins;
+                    overallStats[s.name].points += s.points;
+                }
+            });
+
+            const sortedLeaderboard = Object.values(overallStats).sort((a, b) => b.points - a.points);
+            tbody.innerHTML = '';
+
+            if (sortedLeaderboard.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-500">ยังไม่มีข้อมูลคะแนนสะสม</td></tr>`;
+                return;
+            }
+
+            sortedLeaderboard.forEach((row, index) => {
+                const rankColor = index === 0 ? 'text-amber-400 font-bold' : index === 1 ? 'text-slate-300 font-bold' : index === 2 ? 'text-amber-600 font-bold' : 'text-slate-400';
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-800/40 transition">
+                        <td class="p-4 font-mono ${rankColor}">#${index + 1}</td>
+                        <td class="p-4 font-semibold text-slate-100">${row.name}</td>
+                        <td class="p-4 text-center text-slate-400">${row.matches}</td>
+                        <td class="p-4 text-center text-emerald-400">${row.wins}</td>
+                        <td class="p-4 text-center font-bold font-mono text-amber-400 text-base">${row.points}</td>
                     </tr>
-                `).join('');
+                `;
+            });
+        }
+
+        function renderStandings() {
+            const tbody = document.getElementById('standings-table');
+            const standings = calculateStandings();
+            tbody.innerHTML = '';
+
+            if (standings.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-500">ยังไม่มีนักแข่งในทัวร์นาเมนต์นี้</td></tr>`;
+                return;
             }
 
-            // 2. Standings Render
-            const standingsTable = document.getElementById('standings-table');
-            const currentStandings = calculateStandings(db.currentTournament);
-            if (currentStandings.length === 0) {
-                standingsTable.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-slate-500 text-xs">ยังไม่มีผู้เข้าร่วมแข่งขัน</td></tr>`;
-            } else {
-                standingsTable.innerHTML = currentStandings.map((s, idx) => `
-                    <tr class="hover:bg-slate-800/30 transition ${s.isDropped ? 'opacity-40 bg-red-950/10' : ''}">
-                        <td class="p-4 font-mono font-bold text-slate-400">#${idx + 1}</td>
-                        <td class="p-4 font-semibold text-slate-100">${s.name} ${s.isDropped ? '<span class="text-xs text-red-400 font-normal">(Dropped)</span>' : ''}</td>
-                        <td class="p-4 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-mono ${s.isDropped ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}">${s.isDropped ? 'DROPPED' : 'ACTIVE'}</span></td>
-                        <td class="p-4 text-center font-mono text-slate-400">${s.matchesPlayed}</td>
-                        <td class="p-4 text-center font-mono text-slate-300">${s.wins} - ${s.losses} - ${s.draws}</td>
-                        <td class="p-4 text-center font-mono font-bold text-emerald-400 text-base">${s.points}</td>
-                        <td class="p-4 text-center font-mono text-teal-300 text-xs">${(s.omwp * 100).toFixed(1)}%</td>
-                        <td class="p-4 text-center font-mono text-cyan-300 text-xs">${(s.oomwp * 100).toFixed(1)}%</td>
+            standings.forEach((s, idx) => {
+                const statusBadge = s.isDropped 
+                    ? `<span class="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-[10px] border border-red-500/30">DROP</span>`
+                    : `<span class="bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded text-[10px] border border-emerald-500/30">ACTIVE</span>`;
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-800/40 transition ${s.isDropped ? 'opacity-50' : ''}">
+                        <td class="p-4 font-mono text-slate-400">#${idx + 1}</td>
+                        <td class="p-4 font-semibold text-slate-100">${s.name}</td>
+                        <td class="p-4 text-center">${statusBadge}</td>
+                        <td class="p-4 text-center text-slate-400">${s.played}</td>
+                        <td class="p-4 text-center text-slate-300 font-mono">${s.wins} - ${s.losses} - ${s.draws}</td>
+                        <td class="p-4 text-center font-bold text-emerald-400 font-mono text-base">${s.points}</td>
+                        <td class="p-4 text-center font-mono text-xs text-teal-400">${(s.omwp * 100).toFixed(1)}%</td>
+                        <td class="p-4 text-center font-mono text-xs text-cyan-400">${(s.oomwp * 100).toFixed(1)}%</td>
                     </tr>
-                `).join('');
-            }
+                `;
+            });
+        }
 
-            // 3. Admin Setup & Players Render
-            if (document.getElementById('setup-tourney-name')) {
-                document.getElementById('setup-tourney-name').value = db.currentTournament.name || '';
-                document.getElementById('setup-tourney-date').value = db.currentTournament.date || '';
-            }
+        function renderHistory() {
+            const container = document.getElementById('history-list');
+            container.innerHTML = '';
 
-            document.getElementById('player-count').innerText = db.currentTournament.players.length;
-            const playerList = document.getElementById('player-list');
-            playerList.innerHTML = db.currentTournament.players.map(p => `
-                <li class="py-3 flex justify-between items-center gap-2">
-                    <span class="font-medium text-slate-200 ${p.isDropped ? 'line-through text-slate-500' : ''}">${p.name}</span>
-                    <div class="flex items-center gap-2">
-                        <button onclick="editPlayerName('${p.id}')" class="px-2 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition" title="แก้ไขชื่อ">✏️ แก้ไข</button>
-                        <button onclick="toggleDropPlayer('${p.id}')" class="px-2.5 py-1 rounded-lg text-xs font-semibold transition ${p.isDropped ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'}">${p.isDropped ? 'Re-active' : 'Drop'}</button>
-                        <button onclick="removePlayer('${p.id}')" class="bg-red-500/20 text-red-400 border border-red-500/30 px-2.5 py-1 rounded-lg text-xs font-semibold hover:bg-red-500/30 transition">ลบ</button>
-                    </div>
-                </li>
-            `).join('');
-
-            // Update Round Selectors
-            const rounds = db.currentTournament.rounds;
-            const pubSelect = document.getElementById('public-round-select');
-            const admSelect = document.getElementById('admin-round-select');
-            
-            const roundOptions = rounds.length === 0 
-                ? '<option value="">ยังไม่มีรอบการแข่งขัน</option>'
-                : rounds.map((r, i) => `<option value="${i}">ROUND ${r.roundNum}</option>`).join('');
-
-            pubSelect.innerHTML = roundOptions;
-            admSelect.innerHTML = roundOptions;
-
-            if (rounds.length > 0) {
-                pubSelect.value = rounds.length - 1;
-                admSelect.value = rounds.length - 1;
-            }
-
-            renderPublicPairings();
-            renderAdminPairings();
-
-            // 4. History Render
-            const histList = document.getElementById('history-list');
             if (db.history.length === 0) {
-                histList.innerHTML = `<div class="cyber-card p-8 text-center text-slate-500 text-xs rounded-2xl">ยังไม่มีประวัติทัวร์นาเมนต์ที่จบแล้ว</div>`;
-            } else {
-                histList.innerHTML = db.history.slice().reverse().map(h => `
+                container.innerHTML = `<div class="cyber-card p-8 rounded-2xl text-center text-slate-500">ยังไม่มีประวัติทัวร์นาเมนต์ที่จบแล้ว</div>`;
+                return;
+            }
+
+            db.history.forEach((h, i) => {
+                let rowsHtml = '';
+                h.standings.slice(0, 5).forEach((s, idx) => {
+                    rowsHtml += `
+                        <tr class="border-t border-slate-800/60">
+                            <td class="py-2 text-xs font-mono text-slate-400">#${idx + 1}</td>
+                            <td class="py-2 text-xs text-slate-200 font-semibold">${s.name}</td>
+                            <td class="py-2 text-xs text-center font-mono text-emerald-400 font-bold">${s.points} PTS</td>
+                        </tr>
+                    `;
+                });
+
+                container.innerHTML += `
                     <div class="cyber-card p-5 rounded-2xl space-y-3">
                         <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-                            <h3 class="font-bold text-emerald-400 font-cyber">${h.name}</h3>
-                            <span class="text-xs font-mono text-slate-400">${h.date}</span>
+                            <div>
+                                <h3 class="font-bold text-slate-200 text-sm">${h.name}</h3>
+                                <span class="text-xs text-slate-500">${h.date || 'ไม่ระบุวันที่'}</span>
+                            </div>
+                            <span class="text-xs font-mono bg-slate-800 text-emerald-400 px-3 py-1 rounded-full border border-slate-700">Top 5 Players</span>
                         </div>
-                        <div class="text-xs text-slate-300">
-                            <b>ผู้ชนะอันดับ 1:</b> <span class="text-amber-400 font-bold">${h.standings[0] ? h.standings[0].name : '-'}</span>
-                        </div>
+                        <table class="w-full text-left">${rowsHtml}</table>
                     </div>
-                `).join('');
+                `;
+            });
+        }
+
+        function renderAdminManage() {
+            const list = document.getElementById('admin-list');
+            list.innerHTML = '';
+            db.admins.forEach(a => {
+                list.innerHTML += `
+                    <li class="flex justify-between items-center py-3">
+                        <span class="font-mono text-slate-200">${a.user}</span>
+                        ${db.admins.length > 1 ? `<button onclick="removeAdmin('${a.user}')" class="text-xs text-red-400 hover:text-red-300">ลบ</button>` : ''}
+                    </li>
+                `;
+            });
+        }
+
+        function renderPlayerList() {
+            const list = document.getElementById('player-list');
+            const count = document.getElementById('player-count');
+            count.innerText = db.currentTournament.players.length;
+            list.innerHTML = '';
+
+            db.currentTournament.players.forEach(p => {
+                const badge = p.isDropped 
+                    ? `<span class="bg-red-500/20 text-red-400 text-[10px] px-2 py-0.5 rounded border border-red-500/30">DROPPED</span>` 
+                    : '';
+
+                list.innerHTML += `
+                    <li class="flex justify-between items-center py-2.5 ${p.isDropped ? 'opacity-40' : ''}">
+                        <div class="flex items-center gap-2">
+                            <span class="font-semibold text-slate-200">${p.name}</span>
+                            ${badge}
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="editPlayerName('${p.id}')" class="text-xs text-slate-400 hover:text-slate-200 px-2 py-1 bg-slate-800 rounded">✏️</button>
+                            <button onclick="toggleDropPlayer('${p.id}')" class="text-xs text-amber-400 hover:text-amber-300 px-2 py-1 bg-slate-800 rounded">${p.isDropped ? '🔄 คืนสิทธิ์' : '🛑 Drop'}</button>
+                            <button onclick="removePlayer('${p.id}')" class="text-xs text-red-400 hover:text-red-300 px-2 py-1 bg-slate-800 rounded">✕</button>
+                        </div>
+                    </li>
+                `;
+            });
+        }
+
+        function renderRoundSelects() {
+            const pubSelect = document.getElementById('public-round-select');
+            const admSelect = document.getElementById('admin-round-select');
+            const rounds = db.currentTournament.rounds;
+
+            let optionsHtml = '';
+            rounds.forEach((r, idx) => {
+                optionsHtml += `<option value="${idx}">Round ${r.roundNum}</option>`;
+            });
+
+            if (rounds.length === 0) {
+                optionsHtml = `<option value="">ไม่มีรอบการแข่งขัน</option>`;
             }
 
-            // 5. Admin Manage List Render
-            const adminList = document.getElementById('admin-list');
-            adminList.innerHTML = db.admins.map(a => `
-                <li class="py-2.5 flex justify-between items-center">
-                    <span class="font-mono text-slate-300">👤 ${a.user}</span>
-                    <button onclick="removeAdmin('${a.user}')" class="text-xs text-red-400 hover:text-red-300 font-semibold px-2 py-1 rounded bg-red-500/10 border border-red-500/20">ลบ Admin</button>
-                </li>
-            `).join('');
+            const curPubVal = pubSelect.value || (rounds.length - 1);
+            const curAdmVal = admSelect.value || (rounds.length - 1);
+
+            pubSelect.innerHTML = optionsHtml;
+            admSelect.innerHTML = optionsHtml;
+
+            if (rounds.length > 0) {
+                pubSelect.value = Math.min(curPubVal, rounds.length - 1);
+                admSelect.value = Math.min(curAdmVal, rounds.length - 1);
+            }
         }
 
         function renderPublicPairings() {
-            const pubList = document.getElementById('public-pairings-list');
+            updatePairingsHeaderUI();
+
+            const container = document.getElementById('public-pairings-list');
             const roundIdx = document.getElementById('public-round-select').value;
-            const searchText = document.getElementById('public-search-input').value.trim().toLowerCase();
-            const rounds = db.currentTournament.rounds;
+            const filter = document.getElementById('public-search-input').value.toLowerCase();
+            const round = db.currentTournament.rounds[roundIdx];
 
-            if (roundIdx === "" || !rounds[roundIdx]) {
-                pubList.innerHTML = `<div class="col-span-2 cyber-card p-8 text-center text-slate-500 text-xs rounded-2xl">ยังไม่ได้เริ่มแข่งขันในรอบนี้</div>`;
-                return;
-            }
-
-            const pMap = {};
-            db.currentTournament.players.forEach(p => pMap[p.id] = p.name);
-
-            const matches = rounds[roundIdx].matches;
-            let filteredMatches = matches;
-
-            if (searchText) {
-                filteredMatches = matches.filter((m, idx) => {
-                    const tableNum = (idx + 1).toString();
-                    const name1 = (pMap[m.p1] || '').toLowerCase();
-                    const name2 = (pMap[m.p2] || 'bye').toLowerCase();
-                    return tableNum.includes(searchText) || name1.includes(searchText) || name2.includes(searchText);
-                });
-            }
-
-            if (filteredMatches.length === 0) {
-                pubList.innerHTML = `<div class="col-span-2 cyber-card p-8 text-center text-slate-500 text-xs rounded-2xl">ไม่พบข้อมูลผู้แข่ง หรือ โต๊ะ ที่ค้นหา</div>`;
-                return;
-            }
-
-            pubList.innerHTML = filteredMatches.map((m, originalIdx) => {
-                const idx = matches.indexOf(m);
-                const isP1Win = m.result === 'p1';
-                const isP2Win = m.result === 'p2';
-                const isDraw = m.result === 'draw';
-
-                return `
-                    <div class="cyber-card p-4 rounded-xl space-y-3 relative overflow-hidden transition-all ${searchText ? 'highlight-match' : ''}">
-                        <div class="flex justify-between items-center border-b border-slate-800/80 pb-2">
-                            <span class="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-md">TABLE ${idx + 1}</span>
-                            <span class="text-[10px] font-mono ${m.result ? 'text-slate-400' : 'text-amber-400 animate-pulse'}">${m.result ? 'MATCH FINISHED' : 'IN PROGRESS'}</span>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2 text-sm font-medium">
-                            <div class="p-2.5 rounded-lg border ${isP1Win ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300 font-bold' : isDraw ? 'bg-amber-500/10 border-amber-500/30 text-amber-300' : 'bg-slate-950/60 border-slate-800 text-slate-200'}">
-                                ${pMap[m.p1] || m.p1} ${isP1Win ? '👑' : ''}
-                            </div>
-                            <div class="p-2.5 rounded-lg border ${isP2Win ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300 font-bold' : isDraw ? 'bg-amber-500/10 border-amber-500/30 text-amber-300' : 'bg-slate-950/60 border-slate-800 text-slate-200'}">
-                                ${pMap[m.p2] || m.p2} ${isP2Win ? '👑' : ''}
-                            </div>
-                        </div>
+            container.innerHTML = '';
+            if (!round || !round.matches || round.matches.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full cyber-card p-10 rounded-2xl text-center border border-slate-800">
+                        <div class="text-4xl mb-3">📭</div>
+                        <h3 class="text-base font-bold text-slate-300 font-cyber">ยังไม่พบสายการแข่งขันในรอบนี้</h3>
+                        <p class="text-xs text-slate-500 mt-1">กรุณารอ Admin ดำเนินการจับคู่ (Pairings) ในระบบ</p>
                     </div>
                 `;
-            }).join('');
+                return;
+            }
+
+            round.matches.forEach(m => {
+                const p1 = db.currentTournament.players.find(p => p.id === m.player1) || { name: 'BYE' };
+                const p2 = db.currentTournament.players.find(p => p.id === m.player2) || { name: 'BYE' };
+
+                if (filter && !p1.name.toLowerCase().includes(filter) && !p2.name.toLowerCase().includes(filter) && !m.table.toString().includes(filter)) {
+                    return;
+                }
+
+                const resText = m.result === '1-0' ? 'P1 WIN' : m.result === '0-1' ? 'P2 WIN' : m.result === '0.5-0.5' ? 'DRAW' : 'VS';
+                const isHighlight = filter && (p1.name.toLowerCase().includes(filter) || p2.name.toLowerCase().includes(filter));
+
+                container.innerHTML += `
+                    <div class="cyber-card p-4 rounded-xl flex items-center justify-between border border-slate-800 ${isHighlight ? 'highlight-match' : ''}">
+                        <div class="font-mono text-xs bg-slate-800 px-3 py-1 rounded border border-slate-700 text-emerald-400 font-bold">
+                            ${m.table === 'BYE' ? 'BYE' : `T - ${m.table}`}
+                        </div>
+                        <div class="flex-1 text-center font-semibold text-slate-100 text-sm truncate px-2">${p1.name}</div>
+                        <div class="font-mono text-xs font-bold px-3 py-1 bg-slate-900 rounded text-slate-400 border border-slate-800">${resText}</div>
+                        <div class="flex-1 text-center font-semibold text-slate-100 text-sm truncate px-2">${p2.name}</div>
+                    </div>
+                `;
+            });
         }
 
         function renderAdminPairings() {
-            const admList = document.getElementById('pairings-list');
+            const container = document.getElementById('pairings-list');
             const roundIdx = document.getElementById('admin-round-select').value;
-            const rounds = db.currentTournament.rounds;
+            const round = db.currentTournament.rounds[roundIdx];
 
-            if (roundIdx === "" || !rounds[roundIdx]) {
-                admList.innerHTML = `<div class="cyber-card-admin p-8 text-center text-slate-500 text-xs rounded-2xl">ยังไม่มีรอบการแข่งขัน กด "จับคู่รอบถัดไป" ด้านบนเพื่อเริ่ม</div>`;
+            container.innerHTML = '';
+            if (!round) {
+                container.innerHTML = `<div class="cyber-card-admin p-8 rounded-2xl text-center text-slate-500 border border-slate-800">ยังไม่ได้สร้างการจับคู่ในรอบนี้</div>`;
                 return;
             }
 
-            const pMap = {};
-            db.currentTournament.players.forEach(p => pMap[p.id] = p.name);
+            round.matches.forEach((m, idx) => {
+                const p1 = db.currentTournament.players.find(p => p.id === m.player1) || { name: 'BYE' };
+                const p2 = db.currentTournament.players.find(p => p.id === m.player2) || { name: 'BYE' };
 
-            admList.innerHTML = rounds[roundIdx].matches.map((m, mIdx) => `
-                <div class="cyber-card-admin p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border border-slate-800">
-                    <div class="flex items-center gap-3 w-full sm:w-auto">
-                        <span class="text-xs font-mono font-bold bg-slate-900 border border-slate-700 text-blue-400 px-2.5 py-1 rounded-md">T${mIdx + 1}</span>
-                        <div class="text-sm font-semibold text-slate-200 flex items-center gap-2 flex-1">
-                            <span>${pMap[m.p1] || m.p1}</span>
-                            <span class="text-xs text-slate-500">VS</span>
-                            <span>${pMap[m.p2] || m.p2}</span>
+                const btnClass = (val) => m.result === val 
+                    ? "bg-blue-600 text-white font-bold border-blue-400" 
+                    : "bg-slate-900/80 text-slate-400 hover:bg-slate-800 border-slate-800";
+
+                container.innerHTML += `
+                    <div class="cyber-card-admin p-4 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3 border border-slate-800">
+                        <div class="flex items-center gap-3 w-full sm:w-auto">
+                            <span class="font-mono text-xs bg-slate-800 px-2.5 py-1 rounded border border-slate-700 text-blue-400 font-bold">
+                                ${m.table === 'BYE' ? 'BYE' : `Table ${m.table}`}
+                            </span>
+                            <span class="font-semibold text-sm text-slate-200">${p1.name} <b class="text-slate-500 font-normal">vs</b> ${p2.name}</span>
                         </div>
+                        ${m.player2 === 'BYE' ? `
+                            <span class="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded border border-emerald-500/30">BYE (+3 PTS)</span>
+                        ` : `
+                            <div class="flex gap-1.5 w-full sm:w-auto justify-end">
+                                <button onclick="setMatchResult(${roundIdx}, ${idx}, '1-0')" class="px-3 py-1 rounded text-xs border transition ${btnClass('1-0')}">${p1.name} Win</button>
+                                <button onclick="setMatchResult(${roundIdx}, ${idx}, '0-1')" class="px-3 py-1 rounded text-xs border transition ${btnClass('0-1')}">${p2.name} Win</button>
+                                <button onclick="setMatchResult(${roundIdx}, ${idx}, '0.5-0.5')" class="px-3 py-1 rounded text-xs border transition ${btnClass('0.5-0.5')}">เสมอ</button>
+                                <button onclick="setMatchResult(${roundIdx}, ${idx}, '')" class="px-2 py-1 rounded text-xs border border-slate-800 bg-slate-950 text-slate-500 hover:text-slate-300">✕</button>
+                            </div>
+                        `}
                     </div>
-                    ${m.p2 === 'BYE' ? '<span class="text-xs font-mono text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-lg">AUTO WIN (BYE)</span>' : `
-                        <div class="flex items-center gap-1.5 w-full sm:w-auto justify-end">
-                            <button onclick="setResult(${roundIdx}, ${mIdx}, 'p1')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition border ${m.result === 'p1' ? 'bg-emerald-500 text-slate-950 border-emerald-400' : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-slate-500'}">P1 ชนะ</button>
-                            <button onclick="setResult(${roundIdx}, ${mIdx}, 'draw')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition border ${m.result === 'draw' ? 'bg-amber-500 text-slate-950 border-amber-400' : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-slate-500'}">เสมอ</button>
-                            <button onclick="setResult(${roundIdx}, ${mIdx}, 'p2')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition border ${m.result === 'p2' ? 'bg-emerald-500 text-slate-950 border-emerald-400' : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-slate-500'}">P2 ชนะ</button>
-                        </div>
-                    `}
-                </div>
-            `).join('');
+                `;
+            });
         }
 
-        // Initialize Application
-        render();
+        // Initialize App
+        window.addEventListener('DOMContentLoaded', () => {
+            const nameInput = document.getElementById('setup-tourney-name');
+            const dateInput = document.getElementById('setup-tourney-date');
+            
+            if (nameInput) nameInput.value = db.currentTournament.name || '';
+            if (dateInput) dateInput.value = db.currentTournament.date || '';
+            
+            render();
+        });
     </script>
 </body>
 </html>
