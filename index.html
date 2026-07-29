@@ -378,6 +378,7 @@
         function switchTab(tab) {
             const adminTabs = ['players', 'rounds', 'admin-manage'];
             
+            // ป้องกันการเข้าแท็บ Admin ถ้ายังไม่ได้ Login
             if (adminTabs.includes(tab) && !currentAdmin) {
                 tab = 'dashboard';
             }
@@ -400,6 +401,7 @@
                         btn.className = `px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50`;
                     }
 
+                    // บังคับซ่อนแท็บ Admin ทันทีถ้าไม่ได้ Login
                     if (isAdminBtn && !currentAdmin) {
                         btn.classList.add('hidden');
                     }
@@ -577,6 +579,7 @@
         function render() {
             const isAdmin = !!currentAdmin;
 
+            // ควบคุมการแสดงผล Admin Elements
             document.querySelectorAll('.admin-only').forEach(el => {
                 if (isAdmin) {
                     el.classList.remove('hidden');
@@ -594,7 +597,7 @@
 
             const tourney = db.currentTournament;
 
-            // Render Player List in Admin Panel
+            // Render Player List
             const playerCount = document.getElementById('player-count');
             if(playerCount) playerCount.innerText = tourney.players.length;
             
@@ -612,7 +615,7 @@
                 }
             }
 
-            // Render Round Pairings
+            // Render Pairings
             const currentRoundNum = document.getElementById('current-round-num');
             if(currentRoundNum) currentRoundNum.innerText = tourney.rounds.length || 1;
 
@@ -714,7 +717,7 @@
                 }
             }
 
-            // Render Admin Management List
+            // Render Admin List
             const adminList = document.getElementById('admin-list');
             if(adminList) {
                 adminList.innerHTML = db.admins.map(a => `
