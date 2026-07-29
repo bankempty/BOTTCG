@@ -47,15 +47,11 @@
             background: rgba(16, 185, 129, 0.1) !important;
         }
 
-        /* Print Style for Paper Boards */
         @media print {
             body { background: white !important; color: black !important; padding: 0 !important; }
             header, nav, .no-print, button, input, select, textarea { display: none !important; }
             .cyber-card { background: white !important; border: 1px solid #ccc !important; box-shadow: none !important; color: black !important; }
             .print-only { display: block !important; }
-            .print-title { font-size: 20pt; font-weight: bold; text-align: center; margin-bottom: 10px; }
-            .print-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-            .print-table th, .print-table td { border: 1px solid #000; padding: 8px; text-align: left; }
         }
     </style>
 </head>
@@ -67,7 +63,7 @@
             <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
             <div class="flex items-center gap-4 z-10">
                 <div class="w-12 h-12 rounded-xl bg-slate-900/90 border border-emerald-500/40 p-1 flex items-center justify-center shadow-lg shadow-emerald-500/20 overflow-hidden">
-                    <img src="https://i.ibb.co/vnFCDvL/images-4.jpg" alt="Battle Of Talingchan Logo" class="max-w-full max-h-full object-contain rounded-lg">
+                    <img src="https://i.ibb.co/vnFCDvL/images-4.jpg" alt="Logo" class="max-w-full max-h-full object-contain rounded-lg">
                 </div>
                 <div>
                     <h1 class="text-2xl md:text-3xl font-extrabold tracking-wide font-cyber bg-gradient-to-r from-emerald-400 via-teal-200 to-cyan-400 bg-clip-text text-transparent">
@@ -131,7 +127,6 @@
 
         <!-- TAB PUBLIC: CURRENT PAIRINGS & TABLES -->
         <section id="sec-pairings-public" class="hidden space-y-4">
-            <!-- 1. HEADER แสดงชื่อทัวร์ และ วันที่ -->
             <div class="cyber-card cyber-card-glow p-6 rounded-2xl text-center relative overflow-hidden space-y-2 border border-emerald-500/40">
                 <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
                 <h2 id="pairings-tourney-name" class="text-2xl md:text-3xl font-extrabold text-emerald-400 font-cyber tracking-wide uppercase">
@@ -144,7 +139,6 @@
                 </div>
             </div>
 
-            <!-- 2. Controls & Search Bar -->
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center cyber-card p-5 rounded-2xl gap-4">
                 <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                     <h3 class="text-lg font-bold text-slate-200 font-cyber">🎯 MATCH PAIRINGS</h3>
@@ -161,7 +155,6 @@
                 </div>
             </div>
 
-            <!-- 3. Pairings Cards List -->
             <div id="public-pairings-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
         </section>
 
@@ -171,9 +164,7 @@
                 <div>
                     <div class="flex items-center gap-2">
                         <h3 class="font-bold text-emerald-400 font-cyber text-lg">CURRENT TOURNAMENT STANDINGS</h3>
-                        <button onclick="openTiebreakModal()" class="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 font-bold text-xs flex items-center justify-center transition border border-emerald-500/40" title="ดูคำอธิบายสูตรไทเบรก">
-                            i
-                        </button>
+                        <button onclick="openTiebreakModal()" class="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 font-bold text-xs flex items-center justify-center transition border border-emerald-500/40" title="ดูคำอธิบายสูตรไทเบรก">i</button>
                     </div>
                     <p class="text-xs text-slate-400 mt-1">
                         ลำดับการจัดอันดับ: <span class="text-emerald-300 font-semibold">Points (คะแนน)</span> ➔ 
@@ -213,7 +204,6 @@
 
         <!-- TAB 4: PLAYERS & TOURNAMENT SETUP (ADMIN ONLY) -->
         <section id="sec-players" class="admin-only hidden space-y-4">
-            <!-- 1. TOURNAMENT INFO SETUP -->
             <div class="cyber-card-admin p-6 rounded-2xl space-y-4 border border-blue-500/20">
                 <h2 class="text-md font-bold text-blue-400 font-cyber tracking-wider uppercase flex items-center gap-2">
                     <span>🏆</span> ตั้งค่าข้อมูลทัวร์นาเมนต์
@@ -230,7 +220,6 @@
                 </div>
             </div>
 
-            <!-- 2. ADD PLAYERS (SINGLE & BULK) -->
             <div class="cyber-card-admin p-6 rounded-2xl space-y-4 border border-blue-500/20">
                 <div class="flex justify-between items-center">
                     <h2 class="text-md font-bold text-blue-400 font-cyber tracking-wider uppercase flex items-center gap-2">
@@ -242,23 +231,20 @@
                     </div>
                 </div>
 
-                <!-- Single Add Form -->
                 <div id="form-add-single" class="flex gap-2">
                     <input type="text" id="player-name" placeholder="ระบุชื่อผู้แข่งขัน / BOT Tag" class="flex-1 bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition text-sm">
                     <button onclick="addPlayer()" class="btn-cyber-admin text-white px-5 py-2.5 rounded-xl font-bold text-sm transition">เพิ่มผู้เล่น</button>
                 </div>
 
-                <!-- Bulk Add Form -->
                 <div id="form-add-bulk" class="hidden space-y-3">
-                    <textarea id="bulk-player-names" rows="5" placeholder="วางรายชื่อผู้ข้าร่วมแข่งขันที่นี่ (1 ชื่อ ต่อ 1 บรรทัด)&#10;เช่น:&#10;Player A&#10;Player B&#10;Player C" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl p-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-blue-500 text-xs font-mono"></textarea>
+                    <textarea id="bulk-player-names" rows="5" placeholder="วางรายชื่อผู้ข้าร่วมแข่งขันที่นี่ (1 ชื่อ ต่อ 1 บรรทัด)" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl p-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-blue-500 text-xs font-mono"></textarea>
                     <div class="flex justify-between items-center">
-                        <span class="text-[11px] text-slate-500">* คัดลอกรายชื่อจาก Google Sheets หรือข้อความใน Line มาวางได้เลย</span>
+                        <span class="text-[11px] text-slate-500">* คัดลอกรายชื่อจาก Google Sheets หรือ Line มาวางได้เลย</span>
                         <button onclick="addPlayersBulk()" class="btn-cyber-admin text-white px-5 py-2 rounded-xl font-bold text-xs transition">⚡ เพิ่มนักแข่งทั้งหมด</button>
                     </div>
                 </div>
             </div>
 
-            <!-- 3. PLAYER LIST -->
             <div class="cyber-card-admin p-6 rounded-2xl border border-slate-800">
                 <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-800">
                     <div class="flex items-center gap-2">
@@ -344,11 +330,11 @@
                 </div>
                 <div class="p-3 bg-slate-900/80 rounded-xl border border-teal-500/20 space-y-1">
                     <div class="font-bold text-teal-300 font-mono text-sm">2. OMWP% (Opponent Match Win %)</div>
-                    <p class="text-slate-400"><b class="text-slate-200">อัตราการชนะของ "คู่แข่งที่เราเคยเจอมาทั้งหมด"</b> ยิ่งเจอคู่แข่งสายแข็ง ค่านี้จะยิ่งสูงขึ้น</p>
+                    <p class="text-slate-400"><b class="text-slate-200">อัตราการชนะของคู่แข่งที่เราเคยเจอ</b> ยิ่งเจอสายแข็ง ค่านี้จะยิ่งสูงขึ้น</p>
                 </div>
                 <div class="p-3 bg-slate-900/80 rounded-xl border border-cyan-500/20 space-y-1">
                     <div class="font-bold text-cyan-300 font-mono text-sm">3. OOMWP% (Opponents' Opponent Match Win %)</div>
-                    <p class="text-slate-400"><b class="text-slate-200">อัตราการชนะของ "คู่แข่งของคู่แข่งเรา"</b> ใช้เป็นตัวตัดสินขั้นสุดท้าย</p>
+                    <p class="text-slate-400"><b class="text-slate-200">อัตราการชนะของคู่แข่งของคู่แข่งเรา</b> ใช้เป็นตัวตัดสินขั้นสุดท้าย</p>
                 </div>
             </div>
 
@@ -381,6 +367,20 @@
         function saveDB() {
             localStorage.setItem('tcg_system_db', JSON.stringify(db));
             render();
+
+            // ส่งข้อมูลขึ้น Google Sheets แบบ Real-time ทันที
+            if (typeof google !== 'undefined' && google.script) {
+                const payload = {
+                    name: db.currentTournament.name,
+                    date: db.currentTournament.date,
+                    players: db.currentTournament.players,
+                    rounds: db.currentTournament.rounds
+                };
+                google.script.run
+                    .withSuccessHandler(() => console.log("✅ Sync to Google Sheets successful!"))
+                    .withFailureHandler((err) => console.error("❌ Sync failed:", err))
+                    .syncAllToSheet(payload);
+            }
         }
 
         function openLoginModal() { document.getElementById('login-modal').classList.remove('hidden'); }
@@ -459,7 +459,6 @@
             });
         }
 
-        /* --- TOURNAMENT SETUP & PLAYER MANAGEMENT --- */
         function updateTourneyInfo() {
             const nameInput = document.getElementById('setup-tourney-name');
             const dateInput = document.getElementById('setup-tourney-date');
@@ -568,7 +567,6 @@
             }
         }
 
-        /* --- TIEBREAK & STANDINGS CALCULATIONS --- */
         function calculateStandings() {
             const players = db.currentTournament.players;
             const rounds = db.currentTournament.rounds;
@@ -622,7 +620,6 @@
                 });
             });
 
-            // Calculate OMWP%
             Object.values(stats).forEach(s => {
                 if (s.opponents.length === 0) {
                     s.omwp = 0.33;
@@ -642,7 +639,6 @@
                 }
             });
 
-            // Calculate OOMWP%
             Object.values(stats).forEach(s => {
                 if (s.opponents.length === 0) {
                     s.oomwp = 0.33;
@@ -663,7 +659,6 @@
             });
         }
 
-        /* --- SWISS PAIRINGS GENERATOR --- */
         function generateNextRound() {
             const activePlayers = db.currentTournament.players.filter(p => !p.isDropped);
             if (activePlayers.length < 2) return alert('ต้องมีนักแข่งอย่างน้อย 2 คนที่ยังไม่ออกจากทัวร์');
@@ -673,7 +668,6 @@
             let matches = [];
             let tableNum = 1;
 
-            // Handle Odd Player Count -> BYE
             if (pool.length % 2 !== 0) {
                 let byeIndex = pool.length - 1;
                 for (let i = pool.length - 1; i >= 0; i--) {
@@ -694,7 +688,6 @@
                 });
             }
 
-            // Pair remaining players
             while (pool.length > 0) {
                 const p1 = pool.shift();
                 let pairedIndex = -1;
@@ -768,7 +761,6 @@
             }
         }
 
-        /* --- EXPORT / IMPORT DATA --- */
         function exportData() {
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db));
             const downloadAnchor = document.createElement('a');
@@ -800,7 +792,6 @@
             input.click();
         }
 
-        /* --- RENDER LOGIC --- */
         function render() {
             renderAdminAuthBtn();
             renderDashboard();
@@ -1038,8 +1029,8 @@
             }
 
             round.matches.forEach(m => {
-                const p1 = db.currentTournament.players.find(p => p.id === m.player1) || { name: 'BYE' };
-                const p2 = db.currentTournament.players.find(p => p.id === m.player2) || { name: 'BYE' };
+                const p1 = db.currentTournament.players.find(p => p.id === m.player1) || { name: m.player1Name || 'BYE' };
+                const p2 = db.currentTournament.players.find(p => p.id === m.player2) || { name: m.player2Name || 'BYE' };
 
                 if (filter && !p1.name.toLowerCase().includes(filter) && !p2.name.toLowerCase().includes(filter) && !m.table.toString().includes(filter)) {
                     return;
@@ -1073,8 +1064,8 @@
             }
 
             round.matches.forEach((m, idx) => {
-                const p1 = db.currentTournament.players.find(p => p.id === m.player1) || { name: 'BYE' };
-                const p2 = db.currentTournament.players.find(p => p.id === m.player2) || { name: 'BYE' };
+                const p1 = db.currentTournament.players.find(p => p.id === m.player1) || { name: m.player1Name || 'BYE' };
+                const p2 = db.currentTournament.players.find(p => p.id === m.player2) || { name: m.player2Name || 'BYE' };
 
                 const btnClass = (val) => m.result === val 
                     ? "bg-blue-600 text-white font-bold border-blue-400" 
@@ -1103,15 +1094,38 @@
             });
         }
 
-        // Initialize App
+        // Initialize App: โหลดหน้าเว็บปุ๊บ วิ่งไปดึงข้อมูลล่าสุดจาก Google Sheets ทันที
         window.addEventListener('DOMContentLoaded', () => {
-            const nameInput = document.getElementById('setup-tourney-name');
-            const dateInput = document.getElementById('setup-tourney-date');
-            
-            if (nameInput) nameInput.value = db.currentTournament.name || '';
-            if (dateInput) dateInput.value = db.currentTournament.date || '';
-            
-            render();
+            if (typeof google !== 'undefined' && google.script) {
+                google.script.run
+                    .withSuccessHandler((serverData) => {
+                        if (serverData && serverData.success) {
+                            db.currentTournament.name = serverData.name || db.currentTournament.name;
+                            db.currentTournament.date = serverData.date || db.currentTournament.date;
+                            
+                            if (serverData.players && serverData.players.length > 0) {
+                                db.currentTournament.players = serverData.players;
+                            }
+                            if (serverData.rounds && serverData.rounds.length > 0) {
+                                db.currentTournament.rounds = serverData.rounds;
+                            }
+                            
+                            const nameInput = document.getElementById('setup-tourney-name');
+                            const dateInput = document.getElementById('setup-tourney-date');
+                            if (nameInput) nameInput.value = db.currentTournament.name || '';
+                            if (dateInput) dateInput.value = db.currentTournament.date || '';
+                            
+                            render();
+                        }
+                    })
+                    .getTournamentData();
+            } else {
+                const nameInput = document.getElementById('setup-tourney-name');
+                const dateInput = document.getElementById('setup-tourney-date');
+                if (nameInput) nameInput.value = db.currentTournament.name || '';
+                if (dateInput) dateInput.value = db.currentTournament.date || '';
+                render();
+            }
         });
     </script>
 </body>
