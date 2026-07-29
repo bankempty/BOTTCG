@@ -27,12 +27,12 @@
 
         <!-- Navigation Tabs -->
         <div class="flex flex-wrap gap-2 border-b border-slate-700 pb-1">
-            <!-- PUBLIC TABS (ใครๆ ก็ดูได้) -->
+            <!-- PUBLIC TABS -->
             <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-4 py-2 font-medium text-indigo-400 border-b-2 border-indigo-400">📊 Monthly Dashboard</button>
             <button onclick="switchTab('standings')" id="tab-standings" class="px-4 py-2 font-medium text-slate-400 hover:text-slate-200">🏆 ผลการแข่งทัวร์ปัจจุบัน</button>
             <button onclick="switchTab('history')" id="tab-history" class="px-4 py-2 font-medium text-slate-400 hover:text-slate-200">📂 ประวัติการแข่งย้อนหลัง</button>
             
-            <!-- ADMIN ONLY TABS (ซ่อนถ้าไม่ล็อกอิน) -->
+            <!-- ADMIN ONLY TABS (ซ่อนไว้เสมอถ้าไม่ล็อกอิน) -->
             <button onclick="switchTab('players')" id="tab-players" class="admin-only hidden px-4 py-2 font-medium text-amber-400 hover:text-amber-300">⚙️ 1. จัดการผู้แข่ง</button>
             <button onclick="switchTab('rounds')" id="tab-rounds" class="admin-only hidden px-4 py-2 font-medium text-amber-400 hover:text-amber-300">⚙️ 2. จับคู่ & ใส่ผล</button>
             <button onclick="switchTab('admin-manage')" id="tab-admin-manage" class="admin-only hidden px-4 py-2 font-medium text-amber-400 hover:text-amber-300">👑 จัดการ Admin</button>
@@ -174,7 +174,7 @@
             currentTournament: { id: Date.now(), name: 'Weekly Tournament', players: [], rounds: [] },
             history: [],
             admins: [
-                { user: 'admin', pass: 'botsswr2025' } // Default Admin
+                { user: 'admin', pass: 'botsswr2025' }
             ]
         };
 
@@ -247,11 +247,10 @@
             }
         }
 
-        // Navigation (Security Checked)
+        // Navigation (Fix Bug - สลับแท็บปลอดภัย ไม่ข้ามคลาส hidden)
         function switchTab(tab) {
             const adminTabs = ['players', 'rounds', 'admin-manage'];
             
-            // ป้องกันไม่ให้แอบเข้าผ่าน Console ถ้าไม่ได้ล็อกอิน
             if (adminTabs.includes(tab) && !currentAdmin) {
                 alert('หน้านี้สำหรับ Admin เท่านั้น');
                 tab = 'dashboard';
@@ -263,14 +262,14 @@
 
                 const btn = document.getElementById(`tab-${t}`);
                 if (btn) {
+                    const isAdminBtn = btn.classList.contains('admin-only');
                     if (t === tab) {
-                        btn.className = btn.classList.contains('admin-only') 
-                            ? "admin-only px-4 py-2 font-medium text-amber-400 border-b-2 border-amber-400" 
-                            : "px-4 py-2 font-medium text-indigo-400 border-b-2 border-indigo-400";
+                        btn.classList.add('border-b-2');
+                        btn.classList.remove('text-slate-400', 'hover:text-slate-200', 'text-amber-400/70');
+                        btn.classList.add(isAdminBtn ? 'text-amber-400' : 'text-indigo-400', isAdminBtn ? 'border-amber-400' : 'border-indigo-400');
                     } else {
-                        btn.className = btn.classList.contains('admin-only')
-                            ? "admin-only px-4 py-2 font-medium text-amber-400/70 hover:text-amber-300"
-                            : "px-4 py-2 font-medium text-slate-400 hover:text-slate-200";
+                        btn.classList.remove('border-b-2', 'border-amber-400', 'border-indigo-400', 'text-amber-400', 'text-indigo-400');
+                        btn.classList.add(isAdminBtn ? 'text-amber-400/70' : 'text-slate-400', 'hover:text-slate-200');
                     }
                 }
             });
@@ -445,11 +444,11 @@
             input.click();
         }
 
-        // Render UI & Permissions
+        // Render UI & Strict Permissions Control
         function render() {
             const isAdmin = !!currentAdmin;
 
-            // สลับการแสดงผลองค์ประกอบเฉพาะ Admin
+            // ซ่อนหรือแสดงองค์ประกอบ Admin อย่างถูกต้อง
             document.querySelectorAll('.admin-only').forEach(el => {
                 if (isAdmin) {
                     el.classList.remove('hidden');
