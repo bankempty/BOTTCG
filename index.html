@@ -118,7 +118,7 @@
         <section id="sec-standings" class="hidden space-y-4">
             <div class="cyber-card p-5 rounded-2xl flex justify-between items-center">
                 <h3 class="font-bold text-emerald-400 font-cyber text-lg">CURRENT STANDINGS</h3>
-                <button onclick="saveAndFinishTournament()" class="admin-only hidden btn-cyber-primary text-slate-950 font-black px-5 py-2.5 rounded-xl text-sm">💾 จบทัวร์นาเมนต์ & บันทึกผล</button>
+                <button onclick="openFinishModal()" class="admin-only hidden btn-cyber-primary text-slate-950 font-black px-5 py-2.5 rounded-xl text-sm">💾 จบทัวร์นาเมนต์ & บันทึกผล</button>
             </div>
             <div class="cyber-card rounded-2xl overflow-hidden">
                 <table class="w-full text-left border-collapse">
@@ -184,6 +184,27 @@
         </div>
     </div>
 
+    <!-- Finish Tournament Modal -->
+    <div id="finish-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
+        <div class="cyber-card cyber-card-glow p-6 rounded-2xl max-w-md w-full space-y-4">
+            <h3 class="text-lg font-bold text-emerald-400 font-cyber">💾 บันทึกทัวร์นาเมนต์</h3>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs text-slate-400 block mb-1">ชื่อทัวร์นาเมนต์</label>
+                    <input type="text" id="modal-tourney-name" placeholder="เช่น T-5 Monthly #1" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-100">
+                </div>
+                <div>
+                    <label class="text-xs text-slate-400 block mb-1">วันที่จัดแข่งขัน</label>
+                    <input type="date" id="modal-tourney-date" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-100">
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button onclick="closeFinishModal()" class="text-xs text-slate-400">ยกเลิก</button>
+                <button onclick="confirmFinishTournament()" class="btn-cyber-primary text-slate-950 font-black px-5 py-2.5 rounded-xl text-xs">ยืนยันบันทึกผล</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ==================== Google Sheets Web App URL ====================
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx0fTAjLNIwgDw_QBmBaABq8NTdKLSW3hZyz9QXlWDG97LpPDkHsbu_Mk7QufJ6aKI/exec";
@@ -197,7 +218,6 @@
 
         let currentAdmin = JSON.parse(sessionStorage.getItem('tcg_active_admin')) || null;
 
-        // ดึงข้อมูลจาก Google Sheets
         function loadDB() {
             const statusEl = document.getElementById('sync-status');
             if(statusEl) {
@@ -227,7 +247,6 @@
                 });
         }
 
-        // บันทึกข้อมูลลง Google Sheets
         function saveDB() {
             const statusEl = document.getElementById('sync-status');
             if(statusEl) {
@@ -252,7 +271,6 @@
             });
         }
 
-        // โหลดข้อมูลครั้งแรกตอนเปิดเว็บ
         loadDB();
 
         function openLoginModal() { document.getElementById('login-modal').classList.remove('hidden'); }
@@ -349,19 +367,37 @@
             saveDB();
         }
 
-        function saveAndFinishTournament() {
+        function openFinishModal() {
             if (db.currentTournament.rounds.length === 0) return alert('ไม่มีข้อมูลการแข่ง');
-            if (!confirm('ยืนยันบันทึกทัวร์นาเมนต์นี้?')) return;
-            const name = prompt('ชื่อทัวร์นาเมนต์:', `BOT Tournament #${db.history.length + 1}`);
-            if (!name) return;
+            document.getElementById('modal-tourney-name').value = `T-5 Monthly #${db.history.length + 1}`;
+            // ตั้งค่าวันที่ปัจจุบันในรูปแบบ YYYY-MM-DD
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('modal-tourney-date').value = today;
+            document.getElementById('finish-modal').classList.remove('hidden');
+        }
+
+        function closeFinishModal() {
+            document.getElementById('finish-modal').classList.add('hidden');
+        }
+
+        function confirmFinishTournament() {
+            const name = document.getElementById('modal-tourney-name').value.trim();
+            const dateVal = document.getElementById('modal-tourney-date').value;
+            if (!name) return alert('กรุณากรอกชื่อทัวร์นาเมนต์');
+            if (!dateVal) return alert('กรุณาเลือกวันที่จัดแข่งขัน');
+
+            // แปลงรูปแบบวันที่จาก YYYY-MM-DD เป็น DD/MM/YYYY แบบไทย
+            const parts = dateVal.split('-');
+            const formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
 
             db.history.push({
                 ...db.currentTournament,
                 name,
-                date: new Date().toLocaleDateString('th-TH'),
+                date: formattedDate,
                 standings: calculateStandings(db.currentTournament)
             });
             db.currentTournament = { id: Date.now(), name: 'BOT TCG Tournament', players: [], rounds: [] };
+            closeFinishModal();
             saveDB();
             switchTab('dashboard');
         }
