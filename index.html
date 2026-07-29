@@ -80,7 +80,7 @@
             <button onclick="switchTab('standings')" id="tab-standings" class="px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">🏆 ผลการแข่งทัวร์ปัจจุบัน</button>
             <button onclick="switchTab('history')" id="tab-history" class="px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">📂 ประวัติการแข่งย้อนหลัง</button>
             
-            <!-- ADMIN ONLY TABS (ซ่อนถาวรหากไม่ได้ Login) -->
+            <!-- ADMIN ONLY TABS -->
             <button onclick="switchTab('players')" id="tab-players" class="admin-only hidden px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">⚙️ 1. จัดการผู้แข่ง</button>
             <button onclick="switchTab('rounds')" id="tab-rounds" class="admin-only hidden px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">⚙️ 2. จับคู่ & ใส่ผล</button>
             <button onclick="switchTab('admin-manage')" id="tab-admin-manage" class="admin-only hidden px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">👑 จัดการ Admin</button>
@@ -390,7 +390,6 @@
                 if (btn) {
                     const isAdminBtn = btn.classList.contains('admin-only');
                     
-                    // ปรับสไตล์ปุ่มตามปกติ
                     if (t === tab) {
                         btn.className = `px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 ${
                             isAdminBtn 
@@ -401,7 +400,6 @@
                         btn.className = `px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50`;
                     }
 
-                    // บังคับการซ่อนปุ่ม Admin ถ้านักแข่งยังไม่ได้ Login (แก้ Bug จุดนี้)
                     if (isAdminBtn && !currentAdmin) {
                         btn.classList.add('hidden');
                     }
@@ -579,7 +577,6 @@
         function render() {
             const isAdmin = !!currentAdmin;
 
-            // ควบคุม Element ทั้งหมดที่มี class .admin-only
             document.querySelectorAll('.admin-only').forEach(el => {
                 if (isAdmin) {
                     el.classList.remove('hidden');
@@ -597,104 +594,143 @@
 
             const tourney = db.currentTournament;
 
+            // Render Player List in Admin Panel
             const playerCount = document.getElementById('player-count');
             if(playerCount) playerCount.innerText = tourney.players.length;
             
             const playerList = document.getElementById('player-list');
             if(playerList) {
-                playerList.innerHTML = tourney.players.map(p => `
-                    <li class="py-2.5 flex justify-between items-center text-slate-300">
-                        <span class="font-medium">${p.name}</span>
-                        <button onclick="removePlayer('${p.id}')" class="text-xs text-red-400/70 hover:text-red-400 bg-red-500/10 hover:bg-red-500/20 px-2.5 py-1 rounded-lg border border-red-500/20 transition">ลบ</button>
-                    </li>
-                `).join('');
-            }
-
-            const currentRoundIdx = tourney.rounds.length - 1;
-            const roundNumEl = document.getElementById('current-round-num');
-            if(roundNumEl) roundNumEl.innerText = tourney.rounds.length || 1;
-            
-            const pairingsList = document.getElementById('pairings-list');
-            if(pairingsList) {
-                if (currentRoundIdx >= 0) {
-                    const round = tourney.rounds[currentRoundIdx];
-                    pairingsList.innerHTML = round.matches.map((m, idx) => {
-                        const p1 = tourney.players.find(p => p.id === m.p1)?.name || 'Unknown';
-                        const p2 = m.p2 === 'BYE' ? 'BYE (ชนะบาย)' : (tourney.players.find(p => p.id === m.p2)?.name || 'Unknown');
-                        const isBye = m.p2 === 'BYE';
-
-                        return `
-                            <div class="cyber-card-admin p-4 rounded-xl flex flex-col md:flex-row justify-between items-center gap-4 border border-slate-800">
-                                <div class="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
-                                    <span class="font-bold ${m.result==='p1'?'text-emerald-400':''}">${p1}</span>
-                                    <span class="text-xs text-slate-600 font-mono font-bold">VS</span>
-                                    <span class="font-bold ${m.result==='p2'?'text-emerald-400':''}">${p2}</span>
-                                </div>
-                                ${!isBye ? `
-                                <div class="flex gap-2">
-                                    <button onclick="setResult(${currentRoundIdx}, ${idx}, 'p1')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition ${m.result==='p1'?'btn-cyber-primary text-slate-950':'bg-slate-800 text-slate-300 hover:bg-slate-700'}">P1 ชนะ</button>
-                                    <button onclick="setResult(${currentRoundIdx}, ${idx}, 'draw')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition ${m.result==='draw'?'bg-amber-500 text-slate-950':'bg-slate-800 text-slate-300 hover:bg-slate-700'}">เสมอ</button>
-                                    <button onclick="setResult(${currentRoundIdx}, ${idx}, 'p2')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition ${m.result==='p2'?'btn-cyber-primary text-slate-950':'bg-slate-800 text-slate-300 hover:bg-slate-700'}">P2 ชนะ</button>
-                                </div>` : '<span class="text-xs bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-lg border border-emerald-500/20">ชนะบายอัตโนมัติ</span>'}
-                            </div>
-                        `;
-                    }).join('');
+                if (tourney.players.length === 0) {
+                    playerList.innerHTML = `<li class="py-4 text-center text-xs text-slate-500">ยังไม่มีนักแข่งในรายการนี้</li>`;
                 } else {
-                    pairingsList.innerHTML = `<p class="text-slate-500 text-center py-8">ยังไม่ได้เริ่มจับคู่ กดปุ่ม "จับคู่รอบถัดไป" เพื่อเริ่มแข่ง</p>`;
+                    playerList.innerHTML = tourney.players.map(p => `
+                        <li class="py-2.5 flex justify-between items-center text-slate-300">
+                            <span class="font-medium">${p.name}</span>
+                            <button onclick="removePlayer('${p.id}')" class="text-xs text-red-400/70 hover:text-red-400 border border-red-500/20 hover:border-red-500/40 px-2 py-1 rounded transition">ลบ</button>
+                        </li>
+                    `).join('');
                 }
             }
 
-            const standings = calculateStandings(tourney);
-            document.getElementById('standings-table').innerHTML = standings.map((s, idx) => `
-                <tr class="hover:bg-slate-800/40 transition">
-                    <td class="p-4 font-bold ${idx===0?'text-amber-400 font-cyber':idx===1?'text-slate-300':idx===2?'text-amber-600':''}">${idx + 1}</td>
-                    <td class="p-4 font-semibold">${s.name}</td>
-                    <td class="p-4 text-center">${s.matchesPlayed}</td>
-                    <td class="p-4 text-center text-xs text-slate-400">${s.wins} - ${s.losses} - ${s.draws}</td>
-                    <td class="p-4 text-center font-bold text-emerald-400 font-cyber text-base">${s.points}</td>
-                    <td class="p-4 text-center text-xs font-mono">${(s.omwp * 100).toFixed(1)}%</td>
-                    <td class="p-4 text-center text-xs font-mono">${(s.oomwp * 100).toFixed(1)}%</td>
-                </tr>
-            `).join('');
+            // Render Round Pairings
+            const currentRoundNum = document.getElementById('current-round-num');
+            if(currentRoundNum) currentRoundNum.innerText = tourney.rounds.length || 1;
 
-            const monthlyLeaderboard = calculateMonthlyLeaderboard();
-            document.getElementById('dashboard-table').innerHTML = monthlyLeaderboard.length ? monthlyLeaderboard.map((m, idx) => {
-                const badge = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}`;
-                return `
-                    <tr class="hover:bg-slate-800/40 transition">
-                        <td class="p-4 font-bold text-base font-cyber">${badge}</td>
-                        <td class="p-4 font-bold text-emerald-300">${m.name}</td>
-                        <td class="p-4 text-center">${m.tourneysPlayed} รายการ</td>
-                        <td class="p-4 text-center text-slate-400">${m.totalWins} ครั้ง</td>
-                        <td class="p-4 text-center font-extrabold text-amber-400 font-cyber text-lg">${m.totalPoints}</td>
-                    </tr>
-                `;
-            }).join('') : `<tr><td colspan="5" class="p-8 text-center text-slate-500">ยังไม่มีประวัติทัวร์นาเมนต์ที่บันทึกผล</td></tr>`;
+            const pairingsList = document.getElementById('pairings-list');
+            if(pairingsList) {
+                if (tourney.rounds.length === 0) {
+                    pairingsList.innerHTML = `<div class="cyber-card p-6 text-center text-slate-500 text-sm rounded-2xl">ยังไม่มีการสร้างรอบการแข่งขัน กด "⚡ จับคู่รอบถัดไป" เพื่อเริ่ม</div>`;
+                } else {
+                    const lastRoundIdx = tourney.rounds.length - 1;
+                    const round = tourney.rounds[lastRoundIdx];
+                    const playerMap = {};
+                    tourney.players.forEach(p => playerMap[p.id] = p.name);
 
-            document.getElementById('history-list').innerHTML = db.history.length ? db.history.map((h) => `
-                <div class="cyber-card p-5 rounded-2xl space-y-2">
-                    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                        <h3 class="font-bold text-emerald-400 font-cyber">${h.name} <span class="text-xs text-slate-400 font-normal">(${h.date})</span></h3>
-                        <span class="text-xs bg-slate-800/80 px-3 py-1 rounded-lg text-slate-300 border border-slate-700">${h.players.length} คน | ${h.rounds.length} รอบ</span>
-                    </div>
-                    <div class="text-xs text-slate-300">
-                        🏆 <b>ผู้ชนะเลิศ:</b> <span class="text-amber-400 font-bold">${h.standings[0]?.name || '-'}</span> (${h.standings[0]?.points || 0} pts)
-                    </div>
-                </div>
-            `).join('') : `<p class="text-slate-500 text-center py-8">ยังไม่มีประวัติการแข่ง</p>`;
+                    pairingsList.innerHTML = round.matches.map((m, mIdx) => {
+                        const name1 = playerMap[m.p1] || 'Unknown';
+                        const name2 = m.p2 === 'BYE' ? 'BYE (ได้บาย)' : (playerMap[m.p2] || 'Unknown');
+                        const isBye = m.p2 === 'BYE';
 
+                        return `
+                            <div class="cyber-card p-4 rounded-xl flex flex-col md:flex-row justify-between items-center gap-4 border border-slate-800">
+                                <div class="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
+                                    <span class="font-mono text-xs text-slate-500">MATCH #${mIdx + 1}</span>
+                                    <div class="font-semibold text-slate-200">
+                                        <span class="${m.result === 'p1' ? 'text-emerald-400 font-bold' : ''}">${name1}</span>
+                                        <span class="text-slate-500 px-2">VS</span>
+                                        <span class="${m.result === 'p2' ? 'text-emerald-400 font-bold' : ''}">${name2}</span>
+                                    </div>
+                                </div>
+                                ${isBye ? `<span class="text-xs bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/20">ได้ 3 แต้มอัตโนมัติ</span>` : `
+                                    <div class="flex items-center gap-1.5 w-full md:w-auto justify-end">
+                                        <button onclick="setResult(${lastRoundIdx}, ${mIdx}, 'p1')" class="px-3 py-1.5 text-xs rounded-lg font-bold border transition ${m.result === 'p1' ? 'bg-emerald-500 text-slate-950 border-emerald-400' : 'bg-slate-800 text-slate-300 border-slate-700 hover:border-emerald-500/50'}">${name1} ชนะ</button>
+                                        <button onclick="setResult(${lastRoundIdx}, ${mIdx}, 'draw')" class="px-3 py-1.5 text-xs rounded-lg font-bold border transition ${m.result === 'draw' ? 'bg-amber-500 text-slate-950 border-amber-400' : 'bg-slate-800 text-slate-300 border-slate-700 hover:border-amber-500/50'}">เสมอ</button>
+                                        <button onclick="setResult(${lastRoundIdx}, ${mIdx}, 'p2')" class="px-3 py-1.5 text-xs rounded-lg font-bold border transition ${m.result === 'p2' ? 'bg-emerald-500 text-slate-950 border-emerald-400' : 'bg-slate-800 text-slate-300 border-slate-700 hover:border-emerald-500/50'}">${name2} ชนะ</button>
+                                    </div>
+                                `}
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+
+            // Render Current Standings
+            const standingsTable = document.getElementById('standings-table');
+            if(standingsTable) {
+                const standings = calculateStandings(tourney);
+                if (standings.length === 0) {
+                    standingsTable.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-500 text-xs">ยังไม่มีข้อมูลคะแนน</td></tr>`;
+                } else {
+                    standingsTable.innerHTML = standings.map((s, idx) => `
+                        <tr class="hover:bg-slate-800/30 transition">
+                            <td class="p-4 font-mono font-bold text-slate-400">#${idx + 1}</td>
+                            <td class="p-4 font-bold text-slate-100">${s.name}</td>
+                            <td class="p-4 text-center font-mono text-slate-400">${s.matchesPlayed}</td>
+                            <td class="p-4 text-center font-mono text-slate-300">${s.wins} - ${s.losses} - ${s.draws}</td>
+                            <td class="p-4 text-center font-mono font-extrabold text-emerald-400 text-base">${s.points}</td>
+                            <td class="p-4 text-center font-mono text-teal-300 text-xs">${(s.omwp * 100).toFixed(1)}%</td>
+                            <td class="p-4 text-center font-mono text-cyan-300 text-xs">${(s.oomwp * 100).toFixed(1)}%</td>
+                        </tr>
+                    `).join('');
+                }
+            }
+
+            // Render Monthly Leaderboard
+            const dashboardTable = document.getElementById('dashboard-table');
+            if(dashboardTable) {
+                const leaderboard = calculateMonthlyLeaderboard();
+                if (leaderboard.length === 0) {
+                    dashboardTable.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-500 text-xs">ยังไม่มีข้อมูลการบันทึกทัวร์นาเมนต์ย้อนหลัง</td></tr>`;
+                } else {
+                    dashboardTable.innerHTML = leaderboard.map((item, idx) => `
+                        <tr class="hover:bg-slate-800/30 transition">
+                            <td class="p-4 font-mono font-bold ${idx < 3 ? 'text-amber-400 text-base' : 'text-slate-400'}">#${idx + 1}</td>
+                            <td class="p-4 font-bold text-slate-100">${item.name}</td>
+                            <td class="p-4 text-center font-mono text-slate-400">${item.tourneysPlayed} ทัวร์</td>
+                            <td class="p-4 text-center font-mono text-slate-300">${item.totalWins} Match</td>
+                            <td class="p-4 text-center font-mono font-extrabold text-amber-400 text-base">${item.totalPoints}</td>
+                        </tr>
+                    `).join('');
+                }
+            }
+
+            // Render History List
+            const historyList = document.getElementById('history-list');
+            if(historyList) {
+                if (db.history.length === 0) {
+                    historyList.innerHTML = `<div class="cyber-card p-6 text-center text-slate-500 text-sm rounded-2xl">ยังไม่มีประวัติทัวร์นาเมนต์ที่จบแล้ว</div>`;
+                } else {
+                    historyList.innerHTML = db.history.slice().reverse().map(h => `
+                        <div class="cyber-card p-5 rounded-2xl space-y-3">
+                            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                                <h3 class="font-bold text-emerald-400 font-cyber">${h.name}</h3>
+                                <span class="text-xs text-slate-500 font-mono">${h.date}</span>
+                            </div>
+                            <div class="text-xs text-slate-400">
+                                แชมป์ประจำทัวร์: <b class="text-amber-400 font-semibold">${h.standings[0] ? h.standings[0].name : '-'}</b>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            // Render Admin Management List
             const adminList = document.getElementById('admin-list');
-            if (adminList) {
+            if(adminList) {
                 adminList.innerHTML = db.admins.map(a => `
                     <li class="py-2.5 flex justify-between items-center text-slate-300">
-                        <span class="font-medium">👤 ${a.user}</span>
-                        <button onclick="removeAdmin('${a.user}')" class="text-xs text-red-400/70 hover:text-red-400 bg-red-500/10 hover:bg-red-500/20 px-2.5 py-1 rounded-lg border border-red-500/20 transition">ลบ</button>
+                        <span class="font-mono text-blue-300">👤 ${a.user}</span>
+                        <button onclick="removeAdmin('${a.user}')" class="text-xs text-red-400/70 hover:text-red-400 border border-red-500/20 hover:border-red-500/40 px-2 py-1 rounded transition">ลบ Admin</button>
                     </li>
                 `).join('');
             }
         }
 
-        render();
+        // Initialize App
+        window.onload = () => {
+            render();
+            switchTab('dashboard');
+        };
     </script>
 </body>
 </html>
