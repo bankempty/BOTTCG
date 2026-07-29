@@ -378,11 +378,12 @@
         function switchTab(tab) {
             const adminTabs = ['players', 'rounds', 'admin-manage'];
             
-            // ป้องกันการเข้าแท็บ Admin ถ้ายังไม่ได้ Login
+            // ป้องกันเข้าแท็บ Admin ถ้าไม่ได้ Login
             if (adminTabs.includes(tab) && !currentAdmin) {
                 tab = 'dashboard';
             }
 
+            // ซ่อน/แสดง Section
             ['dashboard', 'standings', 'history', 'players', 'rounds', 'admin-manage'].forEach(t => {
                 const sec = document.getElementById(`sec-${t}`);
                 if (sec) sec.classList.toggle('hidden', t !== tab);
@@ -391,19 +392,30 @@
                 if (btn) {
                     const isAdminBtn = btn.classList.contains('admin-only');
                     
+                    // ปรับ Style ปุ่ม Active/Inactive โดยไม่ไปยุ่งกับ class 'hidden' และ 'admin-only'
                     if (t === tab) {
-                        btn.className = `px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 ${
-                            isAdminBtn 
-                                ? 'text-blue-400 bg-blue-500/10 border border-blue-500/30 shadow-sm' 
-                                : 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/40 shadow-sm'
-                        }`;
+                        btn.classList.add('font-bold', 'shadow-sm');
+                        btn.classList.remove('font-medium', 'text-slate-400');
+                        if (isAdminBtn) {
+                            btn.classList.add('text-blue-400', 'bg-blue-500/10', 'border', 'border-blue-500/30');
+                        } else {
+                            btn.classList.add('text-emerald-400', 'bg-emerald-500/10', 'border', 'border-emerald-500/40');
+                        }
                     } else {
-                        btn.className = `px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50`;
+                        btn.classList.remove(
+                            'font-bold', 'shadow-sm', 'text-blue-400', 'bg-blue-500/10', 
+                            'border-blue-500/30', 'text-emerald-400', 'bg-emerald-500/10', 'border-emerald-500/40'
+                        );
+                        btn.classList.add('font-medium', 'text-slate-400');
                     }
 
-                    // บังคับซ่อนแท็บ Admin ทันทีถ้าไม่ได้ Login
-                    if (isAdminBtn && !currentAdmin) {
-                        btn.classList.add('hidden');
+                    // บังคับการแสดงผลของแท็บ Admin แบบเบ็ดเสร็จ
+                    if (isAdminBtn) {
+                        if (currentAdmin) {
+                            btn.classList.remove('hidden');
+                        } else {
+                            btn.classList.add('hidden');
+                        }
                     }
                 }
             });
@@ -579,7 +591,7 @@
         function render() {
             const isAdmin = !!currentAdmin;
 
-            // ควบคุมการแสดงผล Admin Elements
+            // ควบคุมการแสดงผล Elements ของ Admin ทั้งหมด
             document.querySelectorAll('.admin-only').forEach(el => {
                 if (isAdmin) {
                     el.classList.remove('hidden');
