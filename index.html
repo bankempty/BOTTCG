@@ -47,7 +47,6 @@
             background: rgba(16, 185, 129, 0.1) !important;
         }
 
-        /* Print Style for Paper Boards */
         @media print {
             body { background: white !important; color: black !important; padding: 0 !important; }
             header, nav, .no-print, button, input, select { display: none !important; }
@@ -84,8 +83,8 @@
 
         <!-- Navigation Tabs -->
         <div class="flex flex-wrap gap-2 border-b border-slate-800/80 pb-2 no-print">
-            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 text-emerald-400 bg-emerald-500/10 border border-emerald-500/30">📊 Monthly Dashboard</button>
-            <button onclick="switchTab('pairings-public')" id="tab-pairings-public" class="px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">🎯 ตารางจับคู่รอบปัจจุบัน</button>
+            <button onclick="switchTab('pairings-public')" id="tab-pairings-public" class="px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 text-emerald-400 bg-emerald-500/10 border border-emerald-500/40">🎯 ตารางจับคู่รอบปัจจุบัน</button>
+            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">📊 Monthly Dashboard</button>
             <button onclick="switchTab('standings')" id="tab-standings" class="px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">🏆 ตารางคะแนนรวม</button>
             <button onclick="switchTab('history')" id="tab-history" class="px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">📂 ประวัติการแข่งย้อนหลัง</button>
             
@@ -95,8 +94,31 @@
             <button onclick="switchTab('admin-manage')" id="tab-admin-manage" class="admin-only hidden px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">👑 จัดการ Admin</button>
         </div>
 
+        <!-- TAB PUBLIC: CURRENT PAIRINGS & TABLES -->
+        <section id="sec-pairings-public" class="space-y-4">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center cyber-card p-5 rounded-2xl gap-4">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <h2 class="text-xl font-bold text-emerald-400 font-cyber">
+                        🎯 PAIRINGS
+                    </h2>
+                    <select id="public-round-select" onchange="renderPublicPairings()" class="bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-500 font-mono"></select>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                    <div class="relative flex-1 sm:w-64">
+                        <input type="text" id="public-search-input" onkeyup="renderPublicPairings()" placeholder="🔍 ค้นหาชื่อนักแข่ง / โต๊ะ..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5">
+                        🖨️ พิมพ์ตาราง
+                    </button>
+                </div>
+            </div>
+
+            <div id="public-pairings-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        </section>
+
         <!-- TAB 1: DASHBOARD (PUBLIC) -->
-        <section id="sec-dashboard" class="space-y-6">
+        <section id="sec-dashboard" class="hidden space-y-6">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center cyber-card p-5 rounded-2xl gap-4">
                 <div>
                     <h2 class="text-xl font-bold text-amber-400 flex items-center gap-2 font-cyber">
@@ -124,31 +146,6 @@
                     <tbody id="dashboard-table" class="divide-y divide-slate-800/60 text-slate-200 text-sm"></tbody>
                 </table>
             </div>
-        </section>
-
-        <!-- TAB PUBLIC: CURRENT PAIRINGS & TABLES -->
-        <section id="sec-pairings-public" class="hidden space-y-4">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center cyber-card p-5 rounded-2xl gap-4">
-                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                    <h2 class="text-xl font-bold text-emerald-400 font-cyber">
-                        🎯 PAIRINGS
-                    </h2>
-                    <select id="public-round-select" onchange="renderPublicPairings()" class="bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-500 font-mono"></select>
-                </div>
-
-                <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
-                    <!-- SEARCH BOX -->
-                    <div class="relative flex-1 sm:w-64">
-                        <input type="text" id="public-search-input" onkeyup="renderPublicPairings()" placeholder="🔍 ค้นหาชื่อนักแข่ง / โต๊ะ..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500">
-                    </div>
-                    <!-- PRINT BUTTON -->
-                    <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5">
-                        🖨️ พิมพ์ตาราง
-                    </button>
-                </div>
-            </div>
-
-            <div id="public-pairings-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
         </section>
 
         <!-- TAB 2: CURRENT STANDINGS (PUBLIC) -->
@@ -204,13 +201,11 @@
                     <span>👥</span> ลงทะเบียนนักแข่ง (เพิ่มเดี่ยว หรือ Bulk Add)
                 </h2>
                 
-                <!-- เพิ่มทีละคน -->
                 <div class="flex gap-2">
                     <input type="text" id="player-name" placeholder="ระบุชื่อผู้แข่งขันเดี่ยวๆ" class="flex-1 bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition text-sm" onkeypress="if(event.key === 'Enter') addPlayer()">
                     <button onclick="addPlayer()" class="btn-cyber-admin text-white px-5 py-2.5 rounded-xl font-bold text-sm transition">เพิ่มเดี่ยว</button>
                 </div>
 
-                <!-- เพิ่มแบบ Bulk (หลายคนพร้อมกัน) -->
                 <div class="space-y-2 pt-2 border-t border-slate-800">
                     <label class="text-xs text-slate-400 font-semibold block">📥 เพิ่มแบบกลุ่ม (Bulk Add): ก๊อปปี้รายชื่อวางได้เลย (บรรทัดละ 1 ชื่อ หรือคั่นด้วยจุลภาค ,)</label>
                     <textarea id="bulk-player-names" rows="3" placeholder="วางรายชื่อนักแข่งทั้งหมดตรงนี้ เช่น:&#10;Bank&#10;Nā Tē&#10;Zen&#10;Kong" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl p-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-blue-500 transition text-xs font-mono"></textarea>
@@ -368,7 +363,7 @@
         function logoutAdmin() {
             currentAdmin = null;
             sessionStorage.removeItem('tcg_active_admin');
-            switchTab('dashboard');
+            switchTab('pairings-public');
             render();
         }
 
@@ -394,7 +389,7 @@
 
         function switchTab(tab) {
             const adminTabs = ['players', 'rounds', 'admin-manage'];
-            if (adminTabs.includes(tab) && !currentAdmin) tab = 'dashboard';
+            if (adminTabs.includes(tab) && !currentAdmin) tab = 'pairings-public';
 
             ['dashboard', 'pairings-public', 'standings', 'history', 'players', 'rounds', 'admin-manage'].forEach(t => {
                 const sec = document.getElementById(`sec-${t}`);
@@ -654,9 +649,11 @@
                                 <span class="text-[9px] text-emerald-400/70 font-bold">TABLE</span>
                                 <span class="text-base font-black text-emerald-400 leading-none">${isBye ? '-' : tableNum}</span>
                             </div>
-                            <div class="space-y-0.5">
-                                <div class="text-sm font-bold text-slate-100">${name1}</div>
-                                <div class="text-xs text-slate-400">vs <span class="font-semibold text-slate-200">${name2}</span></div>
+                            <!-- แก้ไขชื่อให้อยู่ในบรรทัดเดียวกันแบบสวยงาม -->
+                            <div class="text-sm font-semibold text-slate-100 flex items-center gap-2">
+                                <span class="${m.result === 'p1' ? 'text-emerald-400 font-bold' : ''}">${name1}</span>
+                                <span class="text-slate-500 text-xs font-mono">vs</span>
+                                <span class="${m.result === 'p2' ? 'text-emerald-400 font-bold' : ''}">${name2}</span>
                             </div>
                         </div>
                         <div>
@@ -699,9 +696,9 @@
                             <span class="font-mono text-xs text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-md border border-amber-500/20 font-bold">
                                 ${isBye ? 'BYE' : `TABLE ${tableNum}`}
                             </span>
-                            <div class="font-semibold text-slate-200">
+                            <div class="text-sm font-semibold text-slate-200 flex items-center gap-2">
                                 <span class="${m.result === 'p1' ? 'text-emerald-400 font-bold' : ''}">${name1}</span>
-                                <span class="text-slate-500 px-2">VS</span>
+                                <span class="text-slate-500 text-xs font-mono">vs</span>
                                 <span class="${m.result === 'p2' ? 'text-emerald-400 font-bold' : ''}">${name2}</span>
                             </div>
                         </div>
@@ -840,7 +837,8 @@
 
         window.onload = () => {
             render();
-            switchTab('dashboard');
+            // ตั้งค่าเริ่มต้นให้เปิดหน้า "ตารางจับคู่รอบปัจจุบัน" เป็นหน้าแรกสุด เพื่อให้ลูกค้าเห็นทันทีเมื่อเข้าเว็บ
+            switchTab('pairings-public');
         };
     </script>
 </body>
