@@ -3,13 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BOT TCG - Firebase Realtime Swiss-Round</title>
+    <title>BOT TCG - Google Sheets Realtime Swiss-Round</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
-    
-    <!-- Firebase App & Firestore SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
     <style>
         body {
@@ -59,14 +55,14 @@
                 </div>
                 <div>
                     <h1 class="text-2xl md:text-3xl font-extrabold tracking-wide font-cyber bg-gradient-to-r from-emerald-400 via-teal-200 to-cyan-400 bg-clip-text text-transparent">
-                        BOT TCG FIREBASE
+                        BOT TCG SHEETS
                     </h1>
-                    <p class="text-xs text-emerald-400/80 font-mono tracking-widest uppercase">REALTIME SWISS-ROUND & LEADERBOARD</p>
+                    <p class="text-xs text-emerald-400/80 font-mono tracking-widest uppercase">SWISS-ROUND & LEADERBOARD (GOOGLE SHEETS)</p>
                 </div>
             </div>
             
             <div class="flex items-center gap-3 z-10">
-                <span id="sync-status" class="text-[10px] font-mono px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30">⏳ กำลังเชื่อมต่อ DB...</span>
+                <span id="sync-status" class="text-[10px] font-mono px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30">⏳ กำลังซิงค์ข้อมูล...</span>
                 <div id="admin-auth-btn"></div>
             </div>
         </header>
@@ -88,7 +84,7 @@
             <div class="cyber-card p-5 rounded-2xl flex justify-between items-center">
                 <div>
                     <h2 class="text-xl font-bold text-amber-400 font-cyber">👑 MONTHLY LEADERBOARD</h2>
-                    <p class="text-slate-400 text-xs">คะแนนสะสมรวมแบบ Realtime จาก Firebase</p>
+                    <p class="text-slate-400 text-xs">คะแนนสะสมรวมจาก Google Sheets</p>
                 </div>
             </div>
             <div class="cyber-card rounded-2xl overflow-hidden">
@@ -189,20 +185,9 @@
     </div>
 
     <script>
-        // ==================== Firebase Config (ค่าของคุณ) ====================
-        const firebaseConfig = {
-            apiKey: "AIzaSyCpGZeUu3pHIGRSKGJpMft6GaUIUL4lIPA",
-            authDomain: "bottcg-f5d95.firebaseapp.com",
-            projectId: "bottcg-f5d95",
-            storageBucket: "bottcg-f5d95.firebasestorage.app",
-            messagingSenderId: "200030473995",
-            appId: "1:200030473995:web:02cd33afe74783f8475c0e",
-            measurementId: "G-YNVRM446PH"
-        };
-        // ====================================================================
-
-        firebase.initializeApp(firebaseConfig);
-        const dbFirestore = firebase.firestore();
+        // ==================== Google Sheets Web App URL ====================
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx0fTAjLNIwgDw_QBmBaABq8NTdKLSW3hZyz9QXlWDG97LpPDkHsbu_Mk7QufJ6aKI/exec";
+        // =========================================================================
 
         let db = {
             currentTournament: { id: Date.now(), name: 'BOT TCG Tournament', players: [], rounds: [] },
@@ -212,29 +197,63 @@
 
         let currentAdmin = JSON.parse(sessionStorage.getItem('tcg_active_admin')) || null;
 
-        // ดึงข้อมูลจาก Firebase แบบ Realtime
-        dbFirestore.collection("bot_tcg").doc("main_data").onSnapshot((doc) => {
+        // ดึงข้อมูลจาก Google Sheets
+        function loadDB() {
             const statusEl = document.getElementById('sync-status');
-            if (doc.exists) {
-                db = doc.data();
+            if(statusEl) {
+                statusEl.innerText = "⏳ กำลังดึงข้อมูล...";
+                statusEl.className = "text-[10px] font-mono px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30";
+            }
+
+            fetch(WEB_APP_URL)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.currentTournament) {
+                        db = data;
+                    }
+                    if(statusEl) {
+                        statusEl.innerText = "🟢 เชื่อมต่อ Google Sheets สำเร็จ";
+                        statusEl.className = "text-[10px] font-mono px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30";
+                    }
+                    render();
+                })
+                .catch(err => {
+                    console.error(err);
+                    if(statusEl) {
+                        statusEl.innerText = "🔴 เชื่อมต่อ Sheets ไม่สำเร็จ";
+                        statusEl.className = "text-[10px] font-mono px-2.5 py-1 rounded-full bg-red-500/10 text-red-400 border border-red-500/30";
+                    }
+                    render();
+                });
+        }
+
+        // บันทึกข้อมูลลง Google Sheets
+        function saveDB() {
+            const statusEl = document.getElementById('sync-status');
+            if(statusEl) {
+                statusEl.innerText = "💾 กำลังบันทึก...";
+                statusEl.className = "text-[10px] font-mono px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/30";
+            }
+
+            fetch(WEB_APP_URL, {
+                method: 'POST',
+                body: JSON.stringify(db)
+            })
+            .then(res => res.json())
+            .then(res => {
                 if(statusEl) {
-                    statusEl.innerText = "🟢 เชื่อมต่อ DB สำเร็จ (Realtime)";
+                    statusEl.innerText = "🟢 บันทึกลง Sheets แล้ว";
                     statusEl.className = "text-[10px] font-mono px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30";
                 }
-            } else {
-                saveDB(); 
-            }
-            render();
-        }, (error) => {
-            console.error("Firebase Error: ", error);
-            const statusEl = document.getElementById('sync-status');
-            if(statusEl) statusEl.innerText = "🔴 เชื่อมต่อ DB ไม่สำเร็จ";
-        });
-
-        function saveDB() {
-            dbFirestore.collection("bot_tcg").doc("main_data").set(db)
-                .catch((error) => alert("บันทึกข้อมูลไม่สำเร็จ: " + error));
+                render();
+            })
+            .catch(err => {
+                alert('บันทึกไม่สำเร็จ: ' + err);
+            });
         }
+
+        // โหลดข้อมูลครั้งแรกตอนเปิดเว็บ
+        loadDB();
 
         function openLoginModal() { document.getElementById('login-modal').classList.remove('hidden'); }
         function closeLoginModal() { document.getElementById('login-modal').classList.add('hidden'); }
@@ -358,7 +377,10 @@
             const tourney = db.currentTournament;
             const container = document.getElementById('public-pairings-list');
             const select = document.getElementById('public-round-select');
-            if (!container || tourney.rounds.length === 0) return;
+            if (!container || tourney.rounds.length === 0) {
+                if(container) container.innerHTML = '<p class="text-xs text-slate-500 p-4">ยังไม่มีการจับคู่ในรอบนี้</p>';
+                return;
+            }
 
             const selectedIdx = select ? parseInt(select.value) : tourney.rounds.length - 1;
             const round = tourney.rounds[selectedIdx];
@@ -393,7 +415,10 @@
             const tourney = db.currentTournament;
             const container = document.getElementById('pairings-list');
             const select = document.getElementById('admin-round-select');
-            if (!container || tourney.rounds.length === 0) return;
+            if (!container || tourney.rounds.length === 0) {
+                if(container) container.innerHTML = '<p class="text-xs text-slate-500">ยังไม่ได้สร้างรอบการแข่ง</p>';
+                return;
+            }
 
             const selectedIdx = select ? parseInt(select.value) : tourney.rounds.length - 1;
             const round = tourney.rounds[selectedIdx];
@@ -432,7 +457,7 @@
             const tourney = db.currentTournament;
             ['public-round-select', 'admin-round-select'].forEach(id => {
                 const sel = document.getElementById(id);
-                if (sel) {
+                if (sel && tourney.rounds.length > 0) {
                     const val = sel.value;
                     sel.innerHTML = tourney.rounds.map((r, i) => `<option value="${i}">Round ${r.roundNum}</option>`).join('');
                     if (tourney.rounds[val]) sel.value = val;
