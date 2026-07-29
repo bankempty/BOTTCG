@@ -53,9 +53,6 @@
             header, nav, .no-print, button, input, select { display: none !important; }
             .cyber-card { background: white !important; border: 1px solid #ccc !important; box-shadow: none !important; color: black !important; }
             .print-only { display: block !important; }
-            .print-title { font-size: 20pt; font-weight: bold; text-align: center; margin-bottom: 10px; }
-            .print-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-            .print-table th, .print-table td { border: 1px solid #000; padding: 8px; text-align: left; }
         }
     </style>
 </head>
@@ -165,9 +162,9 @@
                         </button>
                     </div>
                     <p class="text-xs text-slate-400 mt-1">
-                        ลำดับการจัดอันดับ: <span class="text-emerald-300 font-semibold">Points (คะแนน)</span> ➔ 
-                        <span class="text-teal-300 font-semibold">OMWP% (ความตึงของคู่แข่ง)</span> ➔ 
-                        <span class="text-cyan-300 font-semibold">OOMWP% (ความตึงของคู่แข่งของคู่แข่ง)</span>
+                        ลำดับการจัดอันดับ: <span class="text-emerald-300 font-semibold">Points (คะแนนสะสม)</span> ➔ 
+                        <span class="text-teal-300 font-semibold">OMWP% (ความตึงคู่แข่ง)</span> ➔ 
+                        <span class="text-cyan-300 font-semibold">OOMWP% (ความตึงคู่แข่งของคู่แข่ง)</span>
                     </p>
                 </div>
                 <button onclick="saveAndFinishTournament()" class="admin-only hidden btn-cyber-primary text-slate-950 font-black px-5 py-2.5 rounded-xl text-sm transition">
@@ -204,11 +201,24 @@
         <section id="sec-players" class="admin-only hidden space-y-4">
             <div class="cyber-card-admin p-6 rounded-2xl space-y-4 border border-blue-500/20">
                 <h2 class="text-md font-bold text-blue-400 font-cyber tracking-wider uppercase flex items-center gap-2">
-                    <span>👥</span> ลงทะเบียนนักแข่ง
+                    <span>👥</span> ลงทะเบียนนักแข่ง (เพิ่มเดี่ยว หรือ Bulk Add)
                 </h2>
+                
+                <!-- เพิ่มทีละคน -->
                 <div class="flex gap-2">
-                    <input type="text" id="player-name" placeholder="ระบุชื่อผู้แข่งขัน / BOT Tag" class="flex-1 bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition text-sm">
-                    <button onclick="addPlayer()" class="btn-cyber-admin text-white px-5 py-2.5 rounded-xl font-bold text-sm transition">เพิ่มผู้เล่น</button>
+                    <input type="text" id="player-name" placeholder="ระบุชื่อผู้แข่งขันเดี่ยวๆ" class="flex-1 bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition text-sm" onkeypress="if(event.key === 'Enter') addPlayer()">
+                    <button onclick="addPlayer()" class="btn-cyber-admin text-white px-5 py-2.5 rounded-xl font-bold text-sm transition">เพิ่มเดี่ยว</button>
+                </div>
+
+                <!-- เพิ่มแบบ Bulk (หลายคนพร้อมกัน) -->
+                <div class="space-y-2 pt-2 border-t border-slate-800">
+                    <label class="text-xs text-slate-400 font-semibold block">📥 เพิ่มแบบกลุ่ม (Bulk Add): ก๊อปปี้รายชื่อวางได้เลย (บรรทัดละ 1 ชื่อ หรือคั่นด้วยจุลภาค ,)</label>
+                    <textarea id="bulk-player-names" rows="3" placeholder="วางรายชื่อนักแข่งทั้งหมดตรงนี้ เช่น:&#10;Bank&#10;Nā Tē&#10;Zen&#10;Kong" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl p-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-blue-500 transition text-xs font-mono"></textarea>
+                    <div class="flex justify-end">
+                        <button onclick="addBulkPlayers()" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-xl font-bold text-xs transition shadow-lg shadow-blue-600/20">
+                            🚀 เพิ่มรายชื่อทั้งหมดเข้าทัวร์
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -287,7 +297,7 @@
             
             <div class="space-y-4 text-xs sm:text-sm text-slate-300 leading-relaxed max-h-[60vh] overflow-y-auto pr-1">
                 <div class="p-3 bg-slate-900/80 rounded-xl border border-emerald-500/20 space-y-1">
-                    <div class="font-bold text-emerald-300 font-mono text-sm">1. POINTS (คะแนนรวม)</div>
+                    <div class="font-bold text-emerald-300 font-mono text-sm">1. POINTS (คะแนนสะสม)</div>
                     <p class="text-slate-400">ชนะ = 3 แต้ม / เสมอ = 1 แต้ม / แพ้ = 0 แต้ม</p>
                 </div>
                 <div class="p-3 bg-slate-900/80 rounded-xl border border-teal-500/20 space-y-1">
@@ -411,9 +421,32 @@
             const input = document.getElementById('player-name');
             const name = input.value.trim();
             if (!name) return;
-            db.currentTournament.players.push({ id: Date.now().toString(), name, isDropped: false });
+            db.currentTournament.players.push({ id: Date.now().toString() + Math.random().toString(36).substr(2, 5), name, isDropped: false });
             input.value = '';
             saveDB();
+        }
+
+        function addBulkPlayers() {
+            const textarea = document.getElementById('bulk-player-names');
+            const rawText = textarea.value.trim();
+            if (!rawText) return alert('กรุณากรอกหรือวางรายชื่อนักแข่งก่อนกดเพิ่ม');
+
+            let names = rawText.split(/[\n,]+/).map(n => n.trim()).filter(n => n.length > 0);
+            if (names.length === 0) return alert('ไม่พบรายชื่อที่ถูกต้อง');
+
+            let addedCount = 0;
+            names.forEach((name, index) => {
+                db.currentTournament.players.push({
+                    id: Date.now().toString() + index + Math.random().toString(36).substr(2, 3),
+                    name: name,
+                    isDropped: false
+                });
+                addedCount++;
+            });
+
+            textarea.value = '';
+            saveDB();
+            alert(`เพิ่มนักแข่งสำเร็จ ${addedCount} คน!`);
         }
 
         function removePlayer(id) {
@@ -483,14 +516,12 @@
 
         function generateNextRound() {
             const tourney = db.currentTournament;
-            // กรองผู้เล่นที่ยังแข่งอยู่ (ไม่โดน Drop)
             const activePlayers = tourney.players.filter(p => !p.isDropped);
             if (activePlayers.length < 2) return alert('ต้องมีผู้เล่นที่ยังแข่งอยู่ (Active) อย่างน้อย 2 คน');
 
             const standings = calculateStandings(tourney);
             const currentRound = tourney.rounds.length + 1;
             
-            // นำเฉพาะผู้เล่น active มาจับคู่
             let pool = standings.filter(s => !s.isDropped).map(s => s.id);
             if (currentRound === 1) pool.sort(() => Math.random() - 0.5);
 
@@ -609,7 +640,6 @@
                 const isBye = m.p2 === 'BYE';
                 const tableNum = mIdx + 1;
 
-                // ตรวจจับ Search Highlight
                 const isMatch = searchKeyword && (
                     name1.toLowerCase().includes(searchKeyword) || 
                     name2.toLowerCase().includes(searchKeyword) || 
@@ -701,7 +731,6 @@
 
             const tourney = db.currentTournament;
 
-            // Update Round Selectors
             ['public-round-select', 'admin-round-select'].forEach(id => {
                 const sel = document.getElementById(id);
                 if (sel) {
@@ -712,7 +741,6 @@
                 }
             });
 
-            // Render Player List (Admin)
             const playerCount = document.getElementById('player-count');
             if (playerCount) playerCount.innerText = tourney.players.length;
             
@@ -741,7 +769,6 @@
             renderPublicPairings();
             renderAdminPairings();
 
-            // Render Standings
             const standingsTable = document.getElementById('standings-table');
             if (standingsTable) {
                 const standings = calculateStandings(tourney);
@@ -763,7 +790,6 @@
                 }
             }
 
-            // Render Leaderboard
             const dashboardTable = document.getElementById('dashboard-table');
             if (dashboardTable) {
                 const leaderboard = calculateMonthlyLeaderboard();
@@ -782,7 +808,6 @@
                 }
             }
 
-            // Render History
             const historyList = document.getElementById('history-list');
             if (historyList) {
                 if (db.history.length === 0) {
@@ -802,7 +827,6 @@
                 }
             }
 
-            // Render Admins
             const adminList = document.getElementById('admin-list');
             if (adminList) {
                 adminList.innerHTML = db.admins.map(a => `
