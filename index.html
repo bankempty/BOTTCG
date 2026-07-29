@@ -50,7 +50,7 @@
         /* Print Style for Paper Boards */
         @media print {
             body { background: white !important; color: black !important; padding: 0 !important; }
-            header, nav, .no-print, button, input, select { display: none !important; }
+            header, nav, .no-print, button, input, select, textarea { display: none !important; }
             .cyber-card { background: white !important; border: 1px solid #ccc !important; box-shadow: none !important; color: black !important; }
             .print-only { display: block !important; }
             .print-title { font-size: 20pt; font-weight: bold; text-align: center; margin-bottom: 10px; }
@@ -93,7 +93,7 @@
             <button onclick="switchTab('history')" id="tab-history" class="px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">📂 ประวัติการแข่งย้อนหลัง</button>
             
             <!-- ADMIN ONLY TABS -->
-            <button onclick="switchTab('players')" id="tab-players" class="admin-only hidden px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">⚙️ 1. จัดการผู้แข่ง</button>
+            <button onclick="switchTab('players')" id="tab-players" class="admin-only hidden px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">⚙️ 1. จัดการผู้แข่ง & ทัวร์</button>
             <button onclick="switchTab('rounds')" id="tab-rounds" class="admin-only hidden px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">⚙️ 2. จับคู่ & ใส่ผล</button>
             <button onclick="switchTab('admin-manage')" id="tab-admin-manage" class="admin-only hidden px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">👑 จัดการ Admin</button>
         </div>
@@ -140,11 +140,9 @@
                 </div>
 
                 <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
-                    <!-- SEARCH BOX -->
                     <div class="relative flex-1 sm:w-64">
                         <input type="text" id="public-search-input" onkeyup="renderPublicPairings()" placeholder="🔍 ค้นหาชื่อนักแข่ง / โต๊ะ..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500">
                     </div>
-                    <!-- PRINT BUTTON -->
                     <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5">
                         🖨️ พิมพ์ตาราง
                     </button>
@@ -200,22 +198,63 @@
             <div id="history-list" class="space-y-4"></div>
         </section>
 
-        <!-- TAB 4: PLAYERS (ADMIN ONLY) -->
+        <!-- TAB 4: PLAYERS & TOURNAMENT SETUP (ADMIN ONLY) -->
         <section id="sec-players" class="admin-only hidden space-y-4">
+            <!-- 1. TOURNAMENT INFO SETUP -->
             <div class="cyber-card-admin p-6 rounded-2xl space-y-4 border border-blue-500/20">
                 <h2 class="text-md font-bold text-blue-400 font-cyber tracking-wider uppercase flex items-center gap-2">
-                    <span>👥</span> ลงทะเบียนนักแข่ง
+                    <span>🏆</span> ตั้งค่าข้อมูลทัวร์นาเมนต์
                 </h2>
-                <div class="flex gap-2">
-                    <input type="text" id="player-name" placeholder="ระบุชื่อผู้แข่งขัน / BOT Tag" class="flex-1 bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition text-sm">
-                    <button onclick="addPlayer()" class="btn-cyber-admin text-white px-5 py-2.5 rounded-xl font-bold text-sm transition">เพิ่มผู้เล่น</button>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs text-slate-400 block mb-1">ชื่อรายการแข่งขัน</label>
+                        <input type="text" id="setup-tourney-name" onchange="updateTourneyInfo()" placeholder="เช่น BOT TCG Weekly #15" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400 block mb-1">วันที่จัด / สถานที่</label>
+                        <input type="text" id="setup-tourney-date" onchange="updateTourneyInfo()" placeholder="เช่น 28/03/2026 @ ตลิ่งชัน" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm">
+                    </div>
                 </div>
             </div>
 
+            <!-- 2. ADD PLAYERS (SINGLE & BULK) -->
+            <div class="cyber-card-admin p-6 rounded-2xl space-y-4 border border-blue-500/20">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-md font-bold text-blue-400 font-cyber tracking-wider uppercase flex items-center gap-2">
+                        <span>👥</span> เพิ่มรายชื่อผู้แข่งขัน
+                    </h2>
+                    <div class="flex gap-2">
+                        <button onclick="toggleAddMode('single')" id="btn-mode-single" class="px-3 py-1 rounded-lg text-xs font-bold bg-blue-500/20 text-blue-400 border border-blue-500/40">เพิ่มทีละคน</button>
+                        <button onclick="toggleAddMode('bulk')" id="btn-mode-bulk" class="px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-200">เพิ่มทีละหลายคน (Bulk)</button>
+                    </div>
+                </div>
+
+                <!-- Single Add Form -->
+                <div id="form-add-single" class="flex gap-2">
+                    <input type="text" id="player-name" placeholder="ระบุชื่อผู้แข่งขัน / BOT Tag" class="flex-1 bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition text-sm">
+                    <button onclick="addPlayer()" class="btn-cyber-admin text-white px-5 py-2.5 rounded-xl font-bold text-sm transition">เพิ่มผู้เล่น</button>
+                </div>
+
+                <!-- Bulk Add Form -->
+                <div id="form-add-bulk" class="hidden space-y-3">
+                    <textarea id="bulk-player-names" rows="5" placeholder="วางรายชื่อผู้ข้าร่วมแข่งขันที่นี่ (1 ชื่อ ต่อ 1 บรรทัด)&#10;เช่น:&#10;Player A&#10;Player B&#10;Player C" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl p-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-blue-500 text-xs font-mono"></textarea>
+                    <div class="flex justify-between items-center">
+                        <span class="text-[11px] text-slate-500">* คัดลอกรายชื่อจาก Google Sheets หรือข้อความใน Line มาวางได้เลย</span>
+                        <button onclick="addPlayersBulk()" class="btn-cyber-admin text-white px-5 py-2 rounded-xl font-bold text-xs transition">⚡ เพิ่มนักแข่งทั้งหมด</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. PLAYER LIST -->
             <div class="cyber-card-admin p-6 rounded-2xl border border-slate-800">
                 <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-800">
-                    <h3 class="text-sm font-semibold text-slate-300">รายชื่อนักแข่งรอบนี้</h3>
-                    <span class="text-xs bg-slate-800 text-blue-400 font-mono px-3 py-1 rounded-full border border-slate-700"><b id="player-count">0</b> คน</span>
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-sm font-semibold text-slate-300">รายชื่อนักแข่งรอบนี้</h3>
+                        <span class="text-xs bg-slate-800 text-blue-400 font-mono px-3 py-1 rounded-full border border-slate-700"><b id="player-count">0</b> คน</span>
+                    </div>
+                    <button onclick="clearAllPlayers()" class="text-xs text-red-400 hover:text-red-300 font-semibold px-2.5 py-1 rounded bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition">
+                        🗑️ ล้างรายชื่อทั้งหมด
+                    </button>
                 </div>
                 <ul id="player-list" class="divide-y divide-slate-800/60 text-sm"></ul>
             </div>
@@ -314,7 +353,7 @@
         ];
 
         let db = JSON.parse(localStorage.getItem('tcg_system_db')) || {
-            currentTournament: { id: Date.now(), name: 'BOT TCG Tournament', players: [], rounds: [] },
+            currentTournament: { id: Date.now(), name: 'BOT TCG Tournament', date: '', players: [], rounds: [] },
             history: [],
             admins: DEFAULT_ADMINS
         };
@@ -407,13 +446,73 @@
             });
         }
 
+        /* --- TOURNAMENT SETUP & PLAYER MANAGEMENT --- */
+        function updateTourneyInfo() {
+            const name = document.getElementById('setup-tourney-name').value.trim();
+            const date = document.getElementById('setup-tourney-date').value.trim();
+            db.currentTournament.name = name || 'BOT TCG Tournament';
+            db.currentTournament.date = date || new Date().toLocaleDateString('th-TH');
+            saveDB();
+        }
+
+        function toggleAddMode(mode) {
+            const singleForm = document.getElementById('form-add-single');
+            const bulkForm = document.getElementById('form-add-bulk');
+            const btnSingle = document.getElementById('btn-mode-single');
+            const btnBulk = document.getElementById('btn-mode-bulk');
+
+            if (mode === 'single') {
+                singleForm.classList.remove('hidden');
+                bulkForm.classList.add('hidden');
+                btnSingle.className = "px-3 py-1 rounded-lg text-xs font-bold bg-blue-500/20 text-blue-400 border border-blue-500/40";
+                btnBulk.className = "px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-200";
+            } else {
+                singleForm.classList.add('hidden');
+                bulkForm.classList.remove('hidden');
+                btnBulk.className = "px-3 py-1 rounded-lg text-xs font-bold bg-blue-500/20 text-blue-400 border border-blue-500/40";
+                btnSingle.className = "px-3 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-200";
+            }
+        }
+
         function addPlayer() {
             const input = document.getElementById('player-name');
             const name = input.value.trim();
             if (!name) return;
-            db.currentTournament.players.push({ id: Date.now().toString(), name, isDropped: false });
+            db.currentTournament.players.push({ id: (Date.now() + Math.random()).toString(), name, isDropped: false });
             input.value = '';
             saveDB();
+        }
+
+        function addPlayersBulk() {
+            const area = document.getElementById('bulk-player-names');
+            const lines = area.value.split('\n');
+            let addedCount = 0;
+
+            lines.forEach(line => {
+                const name = line.trim();
+                if (name) {
+                    db.currentTournament.players.push({
+                        id: (Date.now() + Math.random()).toString(),
+                        name: name,
+                        isDropped: false
+                    });
+                    addedCount++;
+                }
+            });
+
+            area.value = '';
+            saveDB();
+            if (addedCount > 0) alert(`เพิ่มผู้แข่งสำเร็จ ${addedCount} คน!`);
+        }
+
+        function editPlayerName(id) {
+            const p = db.currentTournament.players.find(x => x.id === id);
+            if (!p) return;
+            const newName = prompt('แก้ไขชื่อผู้แข่งขัน:', p.name);
+            if (newName && newName.trim() !== '') {
+                p.name = newName.trim();
+                saveDB();
+            }
         }
 
         function removePlayer(id) {
@@ -429,6 +528,15 @@
             }
         }
 
+        function clearAllPlayers() {
+            if (db.currentTournament.players.length === 0) return;
+            if (confirm('คุณแน่ใจหรือไม่ว่าต้องการล้างรายชื่อผู้แข่งทั้งหมดในทัวร์นี้?')) {
+                db.currentTournament.players = [];
+                saveDB();
+            }
+        }
+
+        /* --- TOURNAMENT ENGINE & TIEBREAK --- */
         function calculateStandings(tournament) {
             const stats = {};
             tournament.players.forEach(p => {
@@ -518,25 +626,25 @@
             if (db.currentTournament.rounds.length === 0) return alert('ยังไม่มีข้อมูลการแข่ง');
             if (!confirm('ยืนยันบันทึกทัวร์นาเมนต์นี้ลงประวัติ?')) return;
 
-            const name = prompt('ตั้งชื่อทัวร์นาเมนต์นี้:', `BOT Tournament #${db.history.length + 1}`);
+            const name = db.currentTournament.name || prompt('ตั้งชื่อทัวร์นาเมนต์นี้:', `BOT Tournament #${db.history.length + 1}`);
             if (!name) return;
 
             const finishedTourney = {
                 ...db.currentTournament,
                 name: name,
-                date: new Date().toLocaleDateString('th-TH'),
+                date: db.currentTournament.date || new Date().toLocaleDateString('th-TH'),
                 standings: calculateStandings(db.currentTournament)
             };
 
             db.history.push(finishedTourney);
-            db.currentTournament = { id: Date.now(), name: 'BOT TCG Tournament', players: [], rounds: [] };
+            db.currentTournament = { id: Date.now(), name: 'BOT TCG Tournament', date: '', players: [], rounds: [] };
             saveDB();
             switchTab('dashboard');
         }
 
         function resetCurrentTournament() {
             if (confirm('ล้างข้อมูลการแข่งปัจจุบัน?')) {
-                db.currentTournament = { id: Date.now(), name: 'BOT TCG Tournament', players: [], rounds: [] };
+                db.currentTournament = { id: Date.now(), name: 'BOT TCG Tournament', date: '', players: [], rounds: [] };
                 saveDB();
             }
         }
@@ -644,13 +752,19 @@
                 `).join('');
             }
 
-            // 3. Admin Players Render
+            // 3. Admin Setup & Players Render
+            if (document.getElementById('setup-tourney-name')) {
+                document.getElementById('setup-tourney-name').value = db.currentTournament.name || '';
+                document.getElementById('setup-tourney-date').value = db.currentTournament.date || '';
+            }
+
             document.getElementById('player-count').innerText = db.currentTournament.players.length;
             const playerList = document.getElementById('player-list');
             playerList.innerHTML = db.currentTournament.players.map(p => `
                 <li class="py-3 flex justify-between items-center gap-2">
                     <span class="font-medium text-slate-200 ${p.isDropped ? 'line-through text-slate-500' : ''}">${p.name}</span>
                     <div class="flex items-center gap-2">
+                        <button onclick="editPlayerName('${p.id}')" class="px-2 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition" title="แก้ไขชื่อ">✏️ แก้ไข</button>
                         <button onclick="toggleDropPlayer('${p.id}')" class="px-2.5 py-1 rounded-lg text-xs font-semibold transition ${p.isDropped ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'}">${p.isDropped ? 'Re-active' : 'Drop'}</button>
                         <button onclick="removePlayer('${p.id}')" class="bg-red-500/20 text-red-400 border border-red-500/30 px-2.5 py-1 rounded-lg text-xs font-semibold hover:bg-red-500/30 transition">ลบ</button>
                     </div>
