@@ -11,8 +11,8 @@
             font-family: 'Kanit', sans-serif;
             background-color: #07090e;
             background-image: 
-                radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 100% 100%, rgba(99, 102, 241, 0.1) 0%, transparent 40%);
+                radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.12) 0%, transparent 50%),
+                radial-gradient(circle at 100% 100%, rgba(99, 102, 241, 0.08) 0%, transparent 40%);
         }
         .font-cyber {
             font-family: 'Orbitron', sans-serif;
@@ -27,16 +27,24 @@
             border: 1px solid rgba(16, 185, 129, 0.3);
             box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
         }
+        .cyber-card-admin {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(71, 85, 105, 0.5);
+        }
         .btn-cyber-primary {
             background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
         }
         .btn-cyber-primary:hover {
-            box-shadow: 0 0 25px rgba(16, 185, 129, 0.7);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
         }
-        .btn-cyber-gold {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+        .btn-cyber-admin {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+        }
+        .btn-cyber-admin:hover {
+            box-shadow: 0 0 18px rgba(59, 130, 246, 0.5);
         }
     </style>
 </head>
@@ -72,9 +80,10 @@
             <button onclick="switchTab('standings')" id="tab-standings" class="px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">🏆 ผลการแข่งทัวร์ปัจจุบัน</button>
             <button onclick="switchTab('history')" id="tab-history" class="px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">📂 ประวัติการแข่งย้อนหลัง</button>
             
-            <button onclick="switchTab('players')" id="tab-players" class="admin-only hidden px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 text-amber-400 hover:bg-amber-500/10 border border-amber-500/20">⚙️ 1. จัดการผู้แข่ง</button>
-            <button onclick="switchTab('rounds')" id="tab-rounds" class="admin-only hidden px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 text-amber-400 hover:bg-amber-500/10 border border-amber-500/20">⚙️ 2. จับคู่ & ใส่ผล</button>
-            <button onclick="switchTab('admin-manage')" id="tab-admin-manage" class="admin-only hidden px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 text-amber-400 hover:bg-amber-500/10 border border-amber-500/20">👑 จัดการ Admin</button>
+            <!-- ADMIN ONLY TABS (ซ่อนแนบเนียนกรณีไม่ใช่ Admin) -->
+            <button onclick="switchTab('players')" id="tab-players" class="admin-only hidden px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">⚙️ 1. จัดการผู้แข่ง</button>
+            <button onclick="switchTab('rounds')" id="tab-rounds" class="admin-only hidden px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">⚙️ 2. จับคู่ & ใส่ผล</button>
+            <button onclick="switchTab('admin-manage')" id="tab-admin-manage" class="admin-only hidden px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">👑 จัดการ Admin</button>
         </div>
 
         <!-- TAB 1: DASHBOARD (PUBLIC) -->
@@ -120,8 +129,8 @@
                     </div>
                     <p class="text-xs text-slate-400 mt-1">
                         ลำดับการจัดอันดับ: <span class="text-emerald-300 font-semibold">Points (คะแนน)</span> ➔ 
-                        <span class="text-teal-300 font-semibold" title="Opponent Match Win Percentage">OMWP% (ความตึงของคู่แข่ง)</span> ➔ 
-                        <span class="text-cyan-300 font-semibold" title="Opponents' Opponent Match Win Percentage">OOMWP% (ความตึงของคู่แข่งของคู่แข่ง)</span>
+                        <span class="text-teal-300 font-semibold">OMWP% (ความตึงของคู่แข่ง)</span> ➔ 
+                        <span class="text-cyan-300 font-semibold">OOMWP% (ความตึงของคู่แข่งของคู่แข่ง)</span>
                     </p>
                 </div>
                 <button onclick="saveAndFinishTournament()" class="admin-only hidden btn-cyber-primary text-slate-950 font-black px-5 py-2.5 rounded-xl text-sm transition">
@@ -157,31 +166,39 @@
             <div id="history-list" class="space-y-4"></div>
         </section>
 
-        <!-- TAB 4: PLAYERS (ADMIN ONLY) -->
+        <!-- TAB 4: PLAYERS (ADMIN ONLY - SIGHT ADJUSTED) -->
         <section id="sec-players" class="admin-only hidden space-y-4">
-            <div class="cyber-card p-6 rounded-2xl space-y-4">
-                <h2 class="text-lg font-bold text-amber-400 font-cyber">REGISTER PLAYER</h2>
+            <div class="cyber-card-admin p-6 rounded-2xl space-y-4 border border-blue-500/20">
+                <h2 class="text-md font-bold text-blue-400 font-cyber tracking-wider uppercase flex items-center gap-2">
+                    <span>👥</span> ลงทะเบียนนักแข่ง
+                </h2>
                 <div class="flex gap-2">
-                    <input type="text" id="player-name" placeholder="ชื่อผู้แข่ง / BOT Tag" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-amber-500/80 transition">
-                    <button onclick="addPlayer()" class="btn-cyber-gold text-slate-950 px-6 py-3 rounded-xl font-black transition">เพิ่มผู้เล่น</button>
+                    <input type="text" id="player-name" placeholder="ระบุชื่อผู้แข่งขัน / BOT Tag" class="flex-1 bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition text-sm">
+                    <button onclick="addPlayer()" class="btn-cyber-admin text-white px-5 py-2.5 rounded-xl font-bold text-sm transition">เพิ่มผู้เล่น</button>
                 </div>
             </div>
 
-            <div class="cyber-card p-6 rounded-2xl">
-                <h3 class="text-md font-semibold text-slate-300 mb-3">รายชื่อผู้แข่งรอบนี้ (<span id="player-count" class="text-emerald-400 font-bold">0</span> คน)</h3>
-                <ul id="player-list" class="divide-y divide-slate-800/80"></ul>
+            <div class="cyber-card-admin p-6 rounded-2xl border border-slate-800">
+                <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-800">
+                    <h3 class="text-sm font-semibold text-slate-300">รายชื่อนักแข่งรอบนี้</h3>
+                    <span class="text-xs bg-slate-800 text-blue-400 font-mono px-3 py-1 rounded-full border border-slate-700"><b id="player-count">0</b> คน</span>
+                </div>
+                <ul id="player-list" class="divide-y divide-slate-800/60 text-sm"></ul>
             </div>
         </section>
 
-        <!-- TAB 5: ROUNDS (ADMIN ONLY) -->
+        <!-- TAB 5: ROUNDS (ADMIN ONLY - SIGHT ADJUSTED) -->
         <section id="sec-rounds" class="admin-only hidden space-y-4">
-            <div class="flex justify-between items-center">
-                <h2 class="text-xl font-bold text-slate-200 font-cyber">ROUND <span id="current-round-num" class="text-emerald-400">1</span></h2>
+            <div class="flex justify-between items-center cyber-card-admin p-4 rounded-2xl border border-slate-800">
+                <div class="flex items-center gap-3">
+                    <span class="text-xs text-slate-400 font-mono">STATUS:</span>
+                    <h2 class="text-lg font-bold text-blue-400 font-cyber">ROUND <span id="current-round-num" class="text-white">1</span></h2>
+                </div>
                 <div class="flex gap-2">
-                    <button onclick="resetCurrentTournament()" class="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 px-4 py-2 rounded-xl text-xs font-semibold transition">
-                        ล้างทัวร์ปัจจุบัน
+                    <button onclick="resetCurrentTournament()" class="bg-slate-800/80 hover:bg-red-950/40 text-slate-400 hover:text-red-400 border border-slate-700 hover:border-red-500/40 px-3 py-2 rounded-xl text-xs transition">
+                        Reset ทัวร์
                     </button>
-                    <button onclick="generateNextRound()" class="btn-cyber-primary text-slate-950 px-6 py-2.5 rounded-xl font-black transition">
+                    <button onclick="generateNextRound()" class="btn-cyber-primary text-slate-950 px-5 py-2 rounded-xl font-bold text-xs transition">
                         ⚡ จับคู่รอบถัดไป
                     </button>
                 </div>
@@ -189,20 +206,22 @@
             <div id="pairings-list" class="space-y-3"></div>
         </section>
 
-        <!-- TAB 6: ADMIN MANAGEMENT (ADMIN ONLY) -->
+        <!-- TAB 6: ADMIN MANAGEMENT (ADMIN ONLY - SIGHT ADJUSTED) -->
         <section id="sec-admin-manage" class="admin-only hidden space-y-4">
-            <div class="cyber-card p-6 rounded-2xl space-y-4">
-                <h2 class="text-lg font-bold text-amber-400 font-cyber">👑 ADMIN CREATION</h2>
+            <div class="cyber-card-admin p-6 rounded-2xl space-y-4 border border-slate-800">
+                <h2 class="text-md font-bold text-slate-300 font-cyber tracking-wider uppercase flex items-center gap-2">
+                    <span>👑</span> เพิ่มบัญชี Admin ใหม่
+                </h2>
                 <div class="flex flex-col md:flex-row gap-2">
-                    <input type="text" id="new-admin-user" placeholder="Username" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-amber-500">
-                    <input type="password" id="new-admin-pass" placeholder="Password" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-amber-500">
-                    <button onclick="createNewAdmin()" class="btn-cyber-gold text-slate-950 px-6 py-2.5 rounded-xl font-black transition">เพิ่ม Admin</button>
+                    <input type="text" id="new-admin-user" placeholder="Username" class="flex-1 bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2 text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500">
+                    <input type="password" id="new-admin-pass" placeholder="Password" class="flex-1 bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2 text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500">
+                    <button onclick="createNewAdmin()" class="bg-slate-700 hover:bg-slate-600 text-slate-100 px-5 py-2 rounded-xl font-bold text-xs transition border border-slate-600">สร้าง Admin</button>
                 </div>
             </div>
 
-            <div class="cyber-card p-6 rounded-2xl">
-                <h3 class="text-md font-semibold text-slate-300 mb-3">รายชื่อ Admin ในระบบ</h3>
-                <ul id="admin-list" class="divide-y divide-slate-800"></ul>
+            <div class="cyber-card-admin p-6 rounded-2xl border border-slate-800">
+                <h3 class="text-sm font-semibold text-slate-400 mb-3 pb-2 border-b border-slate-800">รายชื่อ Admin ในระบบ</h3>
+                <ul id="admin-list" class="divide-y divide-slate-800/60 text-sm"></ul>
             </div>
         </section>
     </div>
@@ -222,7 +241,7 @@
         </div>
     </div>
 
-    <!-- Modal Tiebreak Info (คำอธิบาย OMWP% / OOMWP%) -->
+    <!-- Modal Tiebreak Info -->
     <div id="tiebreak-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
         <div class="cyber-card cyber-card-glow p-6 rounded-2xl max-w-lg w-full space-y-4 border border-emerald-500/40">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -235,22 +254,22 @@
             <div class="space-y-4 text-xs sm:text-sm text-slate-300 leading-relaxed max-h-[60vh] overflow-y-auto pr-1">
                 <div class="p-3 bg-slate-900/80 rounded-xl border border-emerald-500/20 space-y-1">
                     <div class="font-bold text-emerald-300 font-mono text-sm">1. POINTS (คะแนนรวม)</div>
-                    <p class="text-slate-400">เกณฑ์แรกในการตัดสิน ชนะ = 3 แต้ม / เสมอ = 1 แต้ม / แพ้ = 0 แต้ม</p>
+                    <p class="text-slate-400">ชนะ = 3 แต้ม / เสมอ = 1 แต้ม / แพ้ = 0 แต้ม</p>
                 </div>
 
                 <div class="p-3 bg-slate-900/80 rounded-xl border border-teal-500/20 space-y-1">
                     <div class="font-bold text-teal-300 font-mono text-sm">2. OMWP% (Opponent Match Win %)</div>
                     <p class="text-slate-400">
-                        <b class="text-slate-200">เปอร์เซ็นต์อัตราการชนะของ "คู่แข่งที่เราเคยเจอมาทั้งหมด"</b><br>
-                        ยิ่งเราเจอคู่แข่งสายแข็งที่ชนะคนอื่นมาเยอะ ค่านี้จะยิ่งสูงขึ้น ใช้ตัดเกณฑ์กรณีที่มี Points เท่ากัน (คนเจอสายโหดกว่าจะได้อันดับสูงกว่า)
+                        <b class="text-slate-200">อัตราการชนะของ "คู่แข่งที่เราเคยเจอมาทั้งหมด"</b><br>
+                        ยิ่งเราเจอคู่แข่งสายแข็ง ค่านี้จะยิ่งสูงขึ้น ใช้ตัดสินกรณีคะแนนเท่ากัน
                     </p>
                 </div>
 
                 <div class="p-3 bg-slate-900/80 rounded-xl border border-cyan-500/20 space-y-1">
                     <div class="font-bold text-cyan-300 font-mono text-sm">3. OOMWP% (Opponents' Opponent Match Win %)</div>
                     <p class="text-slate-400">
-                        <b class="text-slate-200">เปอร์เซ็นต์อัตราการชนะของ "คู่แข่งของคู่แข่งเรา"</b><br>
-                        ใช้เป็นตัวตัดสินขั้นสุดท้าย หากทั้ง Points และ OMWP% เท่ากันเป๊ะๆ
+                        <b class="text-slate-200">อัตราการชนะของ "คู่แข่งของคู่แข่งเรา"</b><br>
+                        ใช้เป็นตัวตัดสินขั้นสุดท้าย หากทั้ง Points และ OMWP% เท่ากัน
                     </p>
                 </div>
             </div>
@@ -360,7 +379,6 @@
             const adminTabs = ['players', 'rounds', 'admin-manage'];
             
             if (adminTabs.includes(tab) && !currentAdmin) {
-                alert('หน้านี้สำหรับ Admin เท่านั้น');
                 tab = 'dashboard';
             }
 
@@ -374,15 +392,11 @@
                     if (t === tab) {
                         btn.className = `px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 ${
                             isAdminBtn 
-                                ? 'text-amber-400 bg-amber-500/10 border border-amber-500/40 shadow-sm' 
+                                ? 'text-blue-400 bg-blue-500/10 border border-blue-500/30 shadow-sm' 
                                 : 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/40 shadow-sm'
                         }`;
                     } else {
-                        btn.className = `px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 ${
-                            isAdminBtn
-                                ? 'text-amber-400/60 hover:text-amber-300 hover:bg-slate-800/40'
-                                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                        }`;
+                        btn.className = `px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50`;
                     }
                 }
             });
@@ -558,14 +572,18 @@
         function render() {
             const isAdmin = !!currentAdmin;
 
+            // ควบคุมการซ่อน/แสดง Tab ของ Admin แบบเด็ดขาด
             document.querySelectorAll('.admin-only').forEach(el => {
-                if (isAdmin) el.classList.remove('hidden');
-                else el.classList.add('hidden');
+                if (isAdmin) {
+                    el.classList.remove('hidden');
+                } else {
+                    el.classList.add('hidden');
+                }
             });
 
             const authBtnContainer = document.getElementById('admin-auth-btn');
             if (isAdmin) {
-                authBtnContainer.innerHTML = `<button onclick="logoutAdmin()" class="btn-cyber-gold text-slate-950 px-4 py-2 rounded-xl text-xs font-black transition">👑 ${currentAdmin} (Logout)</button>`;
+                authBtnContainer.innerHTML = `<button onclick="logoutAdmin()" class="bg-slate-800 hover:bg-slate-700 text-blue-300 border border-blue-500/30 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5">👤 <span>${currentAdmin}</span> <span class="text-slate-500 text-[10px]">(Logout)</span></button>`;
             } else {
                 authBtnContainer.innerHTML = `<button onclick="openLoginModal()" class="bg-slate-800/80 hover:bg-slate-700 border border-slate-700 px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 transition">🔒 Admin Login</button>`;
             }
@@ -578,9 +596,9 @@
             const playerList = document.getElementById('player-list');
             if(playerList) {
                 playerList.innerHTML = tourney.players.map(p => `
-                    <li class="py-3 flex justify-between items-center">
-                        <span class="font-medium text-slate-200">${p.name}</span>
-                        <button onclick="removePlayer('${p.id}')" class="text-xs text-red-400 hover:text-red-300">ลบ</button>
+                    <li class="py-2.5 flex justify-between items-center text-slate-300">
+                        <span class="font-medium">${p.name}</span>
+                        <button onclick="removePlayer('${p.id}')" class="text-xs text-red-400/70 hover:text-red-400 bg-red-500/10 hover:bg-red-500/20 px-2.5 py-1 rounded-lg border border-red-500/20 transition">ลบ</button>
                     </li>
                 `).join('');
             }
@@ -599,11 +617,11 @@
                         const isBye = m.p2 === 'BYE';
 
                         return `
-                            <div class="cyber-card p-4 rounded-xl flex flex-col md:flex-row justify-between items-center gap-4 border border-slate-800">
+                            <div class="cyber-card-admin p-4 rounded-xl flex flex-col md:flex-row justify-between items-center gap-4 border border-slate-800">
                                 <div class="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
-                                    <span class="font-bold ${m.result==='p1'?'text-emerald-400 font-cyber':''}">${p1}</span>
+                                    <span class="font-bold ${m.result==='p1'?'text-emerald-400':''}">${p1}</span>
                                     <span class="text-xs text-slate-600 font-mono font-bold">VS</span>
-                                    <span class="font-bold ${m.result==='p2'?'text-emerald-400 font-cyber':''}">${p2}</span>
+                                    <span class="font-bold ${m.result==='p2'?'text-emerald-400':''}">${p2}</span>
                                 </div>
                                 ${!isBye ? `
                                 <div class="flex gap-2">
@@ -661,9 +679,9 @@
             const adminList = document.getElementById('admin-list');
             if (adminList) {
                 adminList.innerHTML = db.admins.map(a => `
-                    <li class="py-3 flex justify-between items-center">
-                        <span class="font-medium text-slate-200">👤 ${a.user}</span>
-                        <button onclick="removeAdmin('${a.user}')" class="text-xs text-red-400 hover:text-red-300">ลบ</button>
+                    <li class="py-2.5 flex justify-between items-center text-slate-300">
+                        <span class="font-medium">👤 ${a.user}</span>
+                        <button onclick="removeAdmin('${a.user}')" class="text-xs text-red-400/70 hover:text-red-400 bg-red-500/10 hover:bg-red-500/20 px-2.5 py-1 rounded-lg border border-red-500/20 transition">ลบ</button>
                     </li>
                 `).join('');
             }
