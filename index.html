@@ -80,7 +80,7 @@
             <button onclick="switchTab('standings')" id="tab-standings" class="px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">🏆 ผลการแข่งทัวร์ปัจจุบัน</button>
             <button onclick="switchTab('history')" id="tab-history" class="px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">📂 ประวัติการแข่งย้อนหลัง</button>
             
-            <!-- ADMIN ONLY TABS (ซ่อนแนบเนียนกรณีไม่ใช่ Admin) -->
+            <!-- ADMIN ONLY TABS (ซ่อนถาวรหากไม่ได้ Login) -->
             <button onclick="switchTab('players')" id="tab-players" class="admin-only hidden px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">⚙️ 1. จัดการผู้แข่ง</button>
             <button onclick="switchTab('rounds')" id="tab-rounds" class="admin-only hidden px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">⚙️ 2. จับคู่ & ใส่ผล</button>
             <button onclick="switchTab('admin-manage')" id="tab-admin-manage" class="admin-only hidden px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">👑 จัดการ Admin</button>
@@ -166,7 +166,7 @@
             <div id="history-list" class="space-y-4"></div>
         </section>
 
-        <!-- TAB 4: PLAYERS (ADMIN ONLY - SIGHT ADJUSTED) -->
+        <!-- TAB 4: PLAYERS (ADMIN ONLY) -->
         <section id="sec-players" class="admin-only hidden space-y-4">
             <div class="cyber-card-admin p-6 rounded-2xl space-y-4 border border-blue-500/20">
                 <h2 class="text-md font-bold text-blue-400 font-cyber tracking-wider uppercase flex items-center gap-2">
@@ -187,7 +187,7 @@
             </div>
         </section>
 
-        <!-- TAB 5: ROUNDS (ADMIN ONLY - SIGHT ADJUSTED) -->
+        <!-- TAB 5: ROUNDS (ADMIN ONLY) -->
         <section id="sec-rounds" class="admin-only hidden space-y-4">
             <div class="flex justify-between items-center cyber-card-admin p-4 rounded-2xl border border-slate-800">
                 <div class="flex items-center gap-3">
@@ -206,7 +206,7 @@
             <div id="pairings-list" class="space-y-3"></div>
         </section>
 
-        <!-- TAB 6: ADMIN MANAGEMENT (ADMIN ONLY - SIGHT ADJUSTED) -->
+        <!-- TAB 6: ADMIN MANAGEMENT (ADMIN ONLY) -->
         <section id="sec-admin-manage" class="admin-only hidden space-y-4">
             <div class="cyber-card-admin p-6 rounded-2xl space-y-4 border border-slate-800">
                 <h2 class="text-md font-bold text-slate-300 font-cyber tracking-wider uppercase flex items-center gap-2">
@@ -389,6 +389,8 @@
                 const btn = document.getElementById(`tab-${t}`);
                 if (btn) {
                     const isAdminBtn = btn.classList.contains('admin-only');
+                    
+                    // ปรับสไตล์ปุ่มตามปกติ
                     if (t === tab) {
                         btn.className = `px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 ${
                             isAdminBtn 
@@ -397,6 +399,11 @@
                         }`;
                     } else {
                         btn.className = `px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50`;
+                    }
+
+                    // บังคับการซ่อนปุ่ม Admin ถ้านักแข่งยังไม่ได้ Login (แก้ Bug จุดนี้)
+                    if (isAdminBtn && !currentAdmin) {
+                        btn.classList.add('hidden');
                     }
                 }
             });
@@ -572,7 +579,7 @@
         function render() {
             const isAdmin = !!currentAdmin;
 
-            // ควบคุมการซ่อน/แสดง Tab ของ Admin แบบเด็ดขาด
+            // ควบคุม Element ทั้งหมดที่มี class .admin-only
             document.querySelectorAll('.admin-only').forEach(el => {
                 if (isAdmin) {
                     el.classList.remove('hidden');
