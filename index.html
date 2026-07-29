@@ -75,7 +75,7 @@
             <button onclick="switchTab('history')" id="tab-history" class="px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">📂 ประวัติการแข่ง</button>
             
             <!-- ADMIN ONLY TABS -->
-            <button onclick="switchTab('players')" id="tab-players" class="admin-only hidden px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200">⚙️ 1. จัดการผู้แข่ง</button>
+            <button onclick="switchTab('players')" id="tab-players" class="admin-only hidden px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200">⚙️ 1. ตั้งค่า & จัดการผู้แข่ง</button>
             <button onclick="switchTab('rounds')" id="tab-rounds" class="admin-only hidden px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200">⚙️ 2. จับคู่ & ใส่ผล</button>
         </div>
 
@@ -117,8 +117,8 @@
         <!-- TAB: STANDINGS -->
         <section id="sec-standings" class="hidden space-y-4">
             <div class="cyber-card p-5 rounded-2xl flex justify-between items-center">
-                <h3 class="font-bold text-emerald-400 font-cyber text-lg">CURRENT STANDINGS</h3>
-                <button onclick="openFinishModal()" class="admin-only hidden btn-cyber-primary text-slate-950 font-black px-5 py-2.5 rounded-xl text-sm">💾 จบทัวร์นาเมนต์ & บันทึกผล</button>
+                <h3 class="font-bold text-emerald-400 font-cyber text-lg" id="current-tourney-title-display">CURRENT STANDINGS</h3>
+                <button onclick="finishTournament()" class="admin-only hidden btn-cyber-primary text-slate-950 font-black px-5 py-2.5 rounded-xl text-sm">💾 จบทัวร์นาเมนต์ & บันทึกผล</button>
             </div>
             <div class="cyber-card rounded-2xl overflow-hidden">
                 <table class="w-full text-left border-collapse">
@@ -144,14 +144,39 @@
         </section>
 
         <!-- TAB: PLAYERS (ADMIN) -->
-        <section id="sec-players" class="admin-only hidden space-y-4">
+        <section id="sec-players" class="admin-only hidden space-y-6">
+            <!-- Tournament Info Setup -->
+            <div class="cyber-card-admin p-6 rounded-2xl space-y-4 border border-emerald-500/30">
+                <h2 class="text-md font-bold text-emerald-400 font-cyber">📋 ข้อมูลทัวร์นาเมนต์รอบนี้</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs text-slate-400 block mb-1">ชื่อทัวร์นาเมนต์</label>
+                        <input type="text" id="tourney-name-input" onchange="updateTourneyInfo()" placeholder="เช่น T-5 Monthly #1" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100">
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400 block mb-1">วันที่จัดแข่งขัน</label>
+                        <input type="date" id="tourney-date-input" onchange="updateTourneyInfo()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Single Player Add -->
             <div class="cyber-card-admin p-6 rounded-2xl space-y-4">
-                <h2 class="text-md font-bold text-blue-400 font-cyber">👥 ลงทะเบียนนักแข่ง</h2>
+                <h2 class="text-md font-bold text-blue-400 font-cyber">👤 เพิ่มรายชื่อนักแข่ง (ทีละคน)</h2>
                 <div class="flex gap-2">
                     <input type="text" id="player-name" placeholder="ชื่อผู้แข่งขัน" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm" onkeypress="if(event.key === 'Enter') addPlayer()">
                     <button onclick="addPlayer()" class="btn-cyber-admin text-white px-5 py-2.5 rounded-xl font-bold text-sm">เพิ่ม</button>
                 </div>
             </div>
+
+            <!-- Bulk Player Add -->
+            <div class="cyber-card-admin p-6 rounded-2xl space-y-4">
+                <h2 class="text-md font-bold text-teal-400 font-cyber">📜 ลงทะเบียนแบบกลุ่ม (Bulk Import)</h2>
+                <p class="text-xs text-slate-400">วางรายชื่อผู้แข่งขันหลายคน (1 ชื่อ ต่อ 1 บรรทัด)</p>
+                <textarea id="bulk-players" rows="4" placeholder="ชื่อนักแข่ง 1&#10;ชื่อนักแข่ง 2&#10;ชื่อนักแข่ง 3" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-slate-200"></textarea>
+                <button onclick="addBulkPlayers()" class="btn-cyber-primary text-slate-950 font-bold px-5 py-2.5 rounded-xl text-sm">เพิ่มรายชื่อทั้งหมด</button>
+            </div>
+
             <div class="cyber-card-admin p-6 rounded-2xl">
                 <h3 class="text-sm font-semibold text-slate-300 mb-3">รายชื่อรอบนี้ (<b id="player-count">0</b> คน)</h3>
                 <ul id="player-list" class="divide-y divide-slate-800/60 text-sm"></ul>
@@ -184,34 +209,13 @@
         </div>
     </div>
 
-    <!-- Finish Tournament Modal -->
-    <div id="finish-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
-        <div class="cyber-card cyber-card-glow p-6 rounded-2xl max-w-md w-full space-y-4">
-            <h3 class="text-lg font-bold text-emerald-400 font-cyber">💾 บันทึกทัวร์นาเมนต์</h3>
-            <div class="space-y-3">
-                <div>
-                    <label class="text-xs text-slate-400 block mb-1">ชื่อทัวร์นาเมนต์</label>
-                    <input type="text" id="modal-tourney-name" placeholder="เช่น T-5 Monthly #1" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-100">
-                </div>
-                <div>
-                    <label class="text-xs text-slate-400 block mb-1">วันที่จัดแข่งขัน</label>
-                    <input type="date" id="modal-tourney-date" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-100">
-                </div>
-            </div>
-            <div class="flex justify-end gap-3 pt-2">
-                <button onclick="closeFinishModal()" class="text-xs text-slate-400">ยกเลิก</button>
-                <button onclick="confirmFinishTournament()" class="btn-cyber-primary text-slate-950 font-black px-5 py-2.5 rounded-xl text-xs">ยืนยันบันทึกผล</button>
-            </div>
-        </div>
-    </div>
-
     <script>
         // ==================== Google Sheets Web App URL ====================
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx0fTAjLNIwgDw_QBmBaABq8NTdKLSW3hZyz9QXlWDG97LpPDkHsbu_Mk7QufJ6aKI/exec";
         // =========================================================================
 
         let db = {
-            currentTournament: { id: Date.now(), name: 'BOT TCG Tournament', players: [], rounds: [] },
+            currentTournament: { id: Date.now(), name: 'T-5 Monthly Tournament', date: '', players: [], rounds: [] },
             history: [],
             admins: [{ user: 'admin', pass: 'botsswr2025' }]
         };
@@ -230,6 +234,8 @@
                 .then(data => {
                     if (data && data.currentTournament) {
                         db = data;
+                        if (!db.currentTournament.name) db.currentTournament.name = 'T-5 Monthly Tournament';
+                        if (!db.currentTournament.date) db.currentTournament.date = new Date().toISOString().split('T')[0];
                     }
                     if(statusEl) {
                         statusEl.innerText = "🟢 เชื่อมต่อ Google Sheets สำเร็จ";
@@ -301,6 +307,17 @@
             });
         }
 
+        function updateTourneyInfo() {
+            const name = document.getElementById('tourney-name-input').value.trim();
+            const dateVal = document.getElementById('tourney-date-input').value;
+            if (name) db.currentTournament.name = name;
+            if (dateVal) {
+                const parts = dateVal.split('-');
+                db.currentTournament.date = `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+            saveDB();
+        }
+
         function addPlayer() {
             const input = document.getElementById('player-name');
             const name = input.value.trim();
@@ -308,6 +325,25 @@
             db.currentTournament.players.push({ id: Date.now().toString() + Math.random(), name, isDropped: false });
             input.value = '';
             saveDB();
+        }
+
+        function addBulkPlayers() {
+            const textarea = document.getElementById('bulk-players');
+            const lines = textarea.value.split('\n');
+            let addedCount = 0;
+            lines.forEach(line => {
+                const name = line.trim();
+                if (name) {
+                    db.currentTournament.players.push({ id: Date.now().toString() + Math.random() + addedCount, name, isDropped: false });
+                    addedCount++;
+                }
+            });
+            if (addedCount > 0) {
+                textarea.value = '';
+                saveDB();
+            } else {
+                alert('กรุณากรอกรายชื่ออย่างน้อย 1 คน');
+            }
         }
 
         function removePlayer(id) {
@@ -367,44 +403,38 @@
             saveDB();
         }
 
-        function openFinishModal() {
-            if (db.currentTournament.rounds.length === 0) return alert('ไม่มีข้อมูลการแข่ง');
-            document.getElementById('modal-tourney-name').value = `T-5 Monthly #${db.history.length + 1}`;
-            // ตั้งค่าวันที่ปัจจุบันในรูปแบบ YYYY-MM-DD
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('modal-tourney-date').value = today;
-            document.getElementById('finish-modal').classList.remove('hidden');
-        }
-
-        function closeFinishModal() {
-            document.getElementById('finish-modal').classList.add('hidden');
-        }
-
-        function confirmFinishTournament() {
-            const name = document.getElementById('modal-tourney-name').value.trim();
-            const dateVal = document.getElementById('modal-tourney-date').value;
-            if (!name) return alert('กรุณากรอกชื่อทัวร์นาเมนต์');
-            if (!dateVal) return alert('กรุณาเลือกวันที่จัดแข่งขัน');
-
-            // แปลงรูปแบบวันที่จาก YYYY-MM-DD เป็น DD/MM/YYYY แบบไทย
-            const parts = dateVal.split('-');
-            const formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+        function finishTournament() {
+            const tourney = db.currentTournament;
+            if (tourney.rounds.length === 0) return alert('ไม่มีข้อมูลการแข่งขัน');
+            if (!confirm(`ยืนยันบันทึกทัวร์นาเมนต์ "${tourney.name}" ลงประวัติและ Leaderboard?`)) return;
 
             db.history.push({
-                ...db.currentTournament,
-                name,
-                date: formattedDate,
-                standings: calculateStandings(db.currentTournament)
+                ...tourney,
+                standings: calculateStandings(tourney)
             });
-            db.currentTournament = { id: Date.now(), name: 'BOT TCG Tournament', players: [], rounds: [] };
-            closeFinishModal();
+
+            // Reset current tournament with a clean slate
+            db.currentTournament = { 
+                id: Date.now(), 
+                name: 'T-5 Monthly Tournament', 
+                date: new Date().toISOString().split('T')[0].split('-').reverse().join('/'), 
+                players: [], 
+                rounds: [] 
+            };
+            
             saveDB();
             switchTab('dashboard');
         }
 
         function resetCurrentTournament() {
-            if (confirm('ล้างข้อมูลการแข่งปัจจุบัน?')) {
-                db.currentTournament = { id: Date.now(), name: 'BOT TCG Tournament', players: [], rounds: [] };
+            if (confirm('ล้างข้อมูลการแข่งปัจจุบันทั้งหมด?')) {
+                db.currentTournament = { 
+                    id: Date.now(), 
+                    name: 'T-5 Monthly Tournament', 
+                    date: new Date().toISOString().split('T')[0].split('-').reverse().join('/'), 
+                    players: [], 
+                    rounds: [] 
+                };
                 saveDB();
             }
         }
@@ -491,6 +521,19 @@
             }
 
             const tourney = db.currentTournament;
+            
+            // Set inputs value if not focused
+            const nameInput = document.getElementById('tourney-name-input');
+            const dateInput = document.getElementById('tourney-date-input');
+            if (nameInput && document.activeElement !== nameInput) nameInput.value = tourney.name || '';
+            if (dateInput && document.activeElement !== dateInput && tourney.date) {
+                const parts = tourney.date.split('/');
+                if(parts.length === 3) dateInput.value = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            }
+
+            const titleDisplay = document.getElementById('current-tourney-title-display');
+            if(titleDisplay) titleDisplay.innerText = `CURRENT STANDINGS: ${tourney.name || 'Tournament'}`;
+
             ['public-round-select', 'admin-round-select'].forEach(id => {
                 const sel = document.getElementById(id);
                 if (sel && tourney.rounds.length > 0) {
@@ -549,7 +592,7 @@
             // History
             document.getElementById('history-list').innerHTML = db.history.slice().reverse().map(h => `
                 <div class="cyber-card p-5 rounded-2xl space-y-2">
-                    <h3 class="font-bold text-emerald-400 font-cyber">${h.name} (${h.date})</h3>
+                    <h3 class="font-bold text-emerald-400 font-cyber">${h.name} (${h.date || '-'})</h3>
                     <p class="text-xs text-slate-400">แชมป์: <b class="text-amber-400">${h.standings[0] ? h.standings[0].name : '-'}</b></p>
                 </div>
             `).join('');
