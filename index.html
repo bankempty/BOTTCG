@@ -125,10 +125,11 @@
         <section id="sec-pairings-public" class="hidden space-y-4">
             <div class="cyber-card cyber-card-glow p-6 rounded-2xl text-center relative overflow-hidden space-y-2 border border-emerald-500/40">
                 <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
-                <h2 id="pairings-tourney-name" class="text-2xl md:text-3xl font-extrabold text-emerald-400 font-cyber tracking-wide uppercase">
+                <h2 class="text-2xl md:text-3xl font-extrabold text-emerald-400 font-cyber tracking-wide uppercase">
                     BOT TCG TOURNAMENT
                 </h2>
-                <div id="pairings-tourney-date-wrap" class="inline-block">
+                <p id="pairings-tourney-name" class="text-lg font-bold text-slate-100 mt-1"></p>
+                <div id="pairings-tourney-date-wrap" class="inline-block mt-1">
                     <span id="pairings-tourney-date" class="bg-slate-900/80 border border-emerald-500/30 text-emerald-300 font-mono text-xs px-4 py-1.5 rounded-full shadow-inner">
                         📅 วันที่แข่งขัน: -
                     </span>
@@ -511,7 +512,10 @@
             const dateEl = document.getElementById('pairings-tourney-date');
             const dateWrap = document.getElementById('pairings-tourney-date-wrap');
 
-            if (nameEl) nameEl.innerText = db.currentTournament.name || "BOT TCG TOURNAMENT";
+            if (nameEl) {
+                nameEl.innerText = db.currentTournament.name || '';
+                nameEl.classList.toggle('hidden', !db.currentTournament.name);
+            }
             if (dateEl && dateWrap) {
                 if (db.currentTournament.date) {
                     dateEl.innerText = `📅 วันที่แข่งขัน: ${db.currentTournament.date}`;
