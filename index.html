@@ -371,7 +371,7 @@
         // ==========================================
 
         async function initDatabase() {
-            setDbStatus('Connecting...', 'text-amber-400');
+            setDbStatus('Connecting...', 'text-amber-400 border-amber-500/40 bg-amber-500/10');
             try {
                 await loadCurrentTournamentFromSupabase();
                 setupRealtimeSubscriptions();
@@ -395,11 +395,16 @@
             const tourneyId = 'current-tournament';
 
             // 1. ดึงทัวร์นาเมนต์
-            const { data: tourneyData } = await supabase
+            const { data: tourneyData, error: tourneyErr } = await supabase
                 .from('tournaments')
                 .select('*')
                 .eq('id', tourneyId)
                 .maybeSingle();
+
+            if (tourneyErr) {
+                console.error('Error loading tournament:', tourneyErr.message);
+                throw tourneyErr;
+            }
 
             if (tourneyData) {
                 db.currentTournament.name = tourneyData.name || 'BOT TCG Tournament';
@@ -413,10 +418,15 @@
             }
 
             // 2. ดึง Players
-            const { data: playersData } = await supabase
+            const { data: playersData, error: playersErr } = await supabase
                 .from('players')
                 .select('*')
                 .eq('tournament_id', tourneyId);
+
+            if (playersErr) {
+                console.error('Error loading players:', playersErr.message);
+                throw playersErr;
+            }
 
             if (playersData) {
                 db.currentTournament.players = playersData.map(p => ({
@@ -427,12 +437,17 @@
             }
 
             // 3. ดึง Matches & จัดกลุ่มรอบ
-            const { data: matchesData } = await supabase
+            const { data: matchesData, error: matchesErr } = await supabase
                 .from('rounds_matchings')
                 .select('*')
                 .eq('tournament_id', tourneyId)
                 .order('round_num', { ascending: true })
                 .order('table_num', { ascending: true });
+
+            if (matchesErr) {
+                console.error('Error loading rounds:', matchesErr.message);
+                throw matchesErr;
+            }
 
             let roundsMap = {};
             if (matchesData) {
