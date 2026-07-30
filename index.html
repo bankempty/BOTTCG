@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BOT TCG - Swiss-Round & Leaderboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
     <style>
         body {
@@ -66,9 +67,12 @@
                     <img src="https://i.ibb.co/vnFCDvL/images-4.jpg" alt="Logo" class="max-w-full max-h-full object-contain rounded-lg">
                 </div>
                 <div>
-                    <h1 class="text-2xl md:text-3xl font-extrabold tracking-wide font-cyber bg-gradient-to-r from-emerald-400 via-teal-200 to-cyan-400 bg-clip-text text-transparent">
-                        BOT TCG TOURNAMENT
-                    </h1>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-2xl md:text-3xl font-extrabold tracking-wide font-cyber bg-gradient-to-r from-emerald-400 via-teal-200 to-cyan-400 bg-clip-text text-transparent">
+                            BOT TCG TOURNAMENT
+                        </h1>
+                        <span id="db-status-badge" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">Connecting...</span>
+                    </div>
                     <p class="text-xs text-emerald-400/80 font-mono tracking-widest uppercase">SWISS-ROUND & MONTHLY LEADERBOARD</p>
                 </div>
             </div>
@@ -102,10 +106,6 @@
                         👑 MONTHLY LEADERBOARD
                     </h2>
                     <p class="text-slate-400 text-xs">ตารางอันดับคะแนนสะสมรวมประจำเดือน BOT TCG</p>
-                </div>
-                <div class="admin-only hidden flex gap-2">
-                    <button onclick="exportData()" class="bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 px-3 py-2 rounded-lg border border-slate-700 transition">📥 Export</button>
-                    <button onclick="importData()" class="bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 px-3 py-2 rounded-lg border border-slate-700 transition">📤 Import</button>
                 </div>
             </div>
 
@@ -211,11 +211,11 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                         <label class="text-xs text-slate-400 block mb-1">ชื่อรายการแข่งขัน</label>
-                        <input type="text" id="setup-tourney-name" onchange="updateTourneyInfo()" onkeyup="updateTourneyInfo()" placeholder="เช่น BOT TCG Weekly #15" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm">
+                        <input type="text" id="setup-tourney-name" onchange="updateTourneyInfo()" placeholder="เช่น BOT TCG Weekly #15" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm">
                     </div>
                     <div>
                         <label class="text-xs text-slate-400 block mb-1">วันที่จัด / สถานที่</label>
-                        <input type="text" id="setup-tourney-date" onchange="updateTourneyInfo()" onkeyup="updateTourneyInfo()" placeholder="เช่น 28/03/2026 @ ตลิ่งชัน" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm">
+                        <input type="text" id="setup-tourney-date" onchange="updateTourneyInfo()" placeholder="เช่น 28/03/2026 @ ตลิ่งชัน" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm">
                     </div>
                 </div>
             </div>
@@ -237,7 +237,7 @@
                 </div>
 
                 <div id="form-add-bulk" class="hidden space-y-3">
-                    <textarea id="bulk-player-names" rows="5" placeholder="วางรายชื่อผู้ข้าร่วมแข่งขันที่นี่ (1 ชื่อ ต่อ 1 บรรทัด)" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl p-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-blue-500 text-xs font-mono"></textarea>
+                    <textarea id="bulk-player-names" rows="5" placeholder="วางรายชื่อผู้เข้าร่วมแข่งขันที่นี่ (1 ชื่อ ต่อ 1 บรรทัด)" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl p-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-blue-500 text-xs font-mono"></textarea>
                     <div class="flex justify-between items-center">
                         <span class="text-[11px] text-slate-500">* คัดลอกรายชื่อจาก Google Sheets หรือ Line มาวางได้เลย</span>
                         <button onclick="addPlayersBulk()" class="btn-cyber-admin text-white px-5 py-2 rounded-xl font-bold text-xs transition">⚡ เพิ่มนักแข่งทั้งหมด</button>
@@ -345,43 +345,140 @@
     </div>
 
     <script>
+        // ==========================================
+        // 1. SUPABASE CONNECTION CONFIG
+        // ==========================================
+        const SUPABASE_URL = 'https://rtxhddeaefdmjfuddyhm.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_kOb2bN4u8OfNEvIUcDbiPQ_gFoHx8QP';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
         const DEFAULT_ADMINS = [
             { user: 'admin', pass: 'botsswr2025' },
             { user: 'adminsen', pass: 'botsswr2025' },
             { user: 'adminwut', pass: 'botsswr2025' }
         ];
 
-        let db = JSON.parse(localStorage.getItem('tcg_system_db')) || {
-            currentTournament: { id: Date.now(), name: 'BOT TCG Tournament', date: '', players: [], rounds: [] },
+        let db = {
+            currentTournament: { id: 'current-tournament', name: 'BOT TCG Tournament', date: '', players: [], rounds: [] },
             history: [],
             admins: DEFAULT_ADMINS
         };
 
-        DEFAULT_ADMINS.forEach(defAdmin => {
-            if (!db.admins.some(a => a.user === defAdmin.user)) db.admins.push(defAdmin);
-            else db.admins.find(a => a.user === defAdmin.user).pass = defAdmin.pass;
-        });
-
         let currentAdmin = JSON.parse(sessionStorage.getItem('tcg_active_admin')) || null;
 
-        function saveDB() {
-            localStorage.setItem('tcg_system_db', JSON.stringify(db));
-            render();
+        // ==========================================
+        // 2. SUPABASE DATABASE SYNC & REALTIME
+        // ==========================================
 
-            // ส่งข้อมูลขึ้น Google Sheets แบบ Real-time ทันที
-            if (typeof google !== 'undefined' && google.script) {
-                const payload = {
-                    name: db.currentTournament.name,
-                    date: db.currentTournament.date,
-                    players: db.currentTournament.players,
-                    rounds: db.currentTournament.rounds
-                };
-                google.script.run
-                    .withSuccessHandler(() => console.log("✅ Sync to Google Sheets successful!"))
-                    .withFailureHandler((err) => console.error("❌ Sync failed:", err))
-                    .syncAllToSheet(payload);
+        async function initDatabase() {
+            setDbStatus('Connecting...', 'text-amber-400');
+            try {
+                await loadCurrentTournamentFromSupabase();
+                setupRealtimeSubscriptions();
+                setDbStatus('Online (Realtime)', 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10');
+            } catch (err) {
+                console.error('Database connection error:', err);
+                setDbStatus('Offline / Error', 'text-red-400 border-red-500/40 bg-red-500/10');
+            }
+            render();
+        }
+
+        function setDbStatus(text, className) {
+            const badge = document.getElementById('db-status-badge');
+            if (badge) {
+                badge.innerText = text;
+                badge.className = `text-[10px] px-2.5 py-0.5 rounded-full border ${className}`;
             }
         }
+
+        async function loadCurrentTournamentFromSupabase() {
+            const tourneyId = 'current-tournament';
+
+            // 1. ดึงทัวร์นาเมนต์
+            const { data: tourneyData } = await supabase
+                .from('tournaments')
+                .select('*')
+                .eq('id', tourneyId)
+                .maybeSingle();
+
+            if (tourneyData) {
+                db.currentTournament.name = tourneyData.name || 'BOT TCG Tournament';
+                db.currentTournament.date = tourneyData.date || '';
+            } else {
+                await supabase.from('tournaments').insert([{
+                    id: tourneyId,
+                    name: db.currentTournament.name,
+                    date: db.currentTournament.date
+                }]);
+            }
+
+            // 2. ดึง Players
+            const { data: playersData } = await supabase
+                .from('players')
+                .select('*')
+                .eq('tournament_id', tourneyId);
+
+            if (playersData) {
+                db.currentTournament.players = playersData.map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    isDropped: Boolean(p.is_dropped)
+                }));
+            }
+
+            // 3. ดึง Matches & จัดกลุ่มรอบ
+            const { data: matchesData } = await supabase
+                .from('rounds_matchings')
+                .select('*')
+                .eq('tournament_id', tourneyId)
+                .order('round_num', { ascending: true })
+                .order('table_num', { ascending: true });
+
+            let roundsMap = {};
+            if (matchesData) {
+                matchesData.forEach(row => {
+                    const rNum = Number(row.round_num) || 1;
+                    if (!roundsMap[rNum]) roundsMap[rNum] = [];
+                    roundsMap[rNum].push({
+                        id: row.id,
+                        table: row.table_num,
+                        player1: row.player1_id,
+                        player2: row.player2_id,
+                        result: row.result || ''
+                    });
+                });
+            }
+
+            db.currentTournament.rounds = Object.keys(roundsMap).map(rNum => ({
+                roundNum: Number(rNum),
+                matches: roundsMap[rNum]
+            }));
+
+            // อัปเดตช่อง Input ในหน้า Admin
+            const nameEl = document.getElementById('setup-tourney-name');
+            const dateEl = document.getElementById('setup-tourney-date');
+            if (nameEl) nameEl.value = db.currentTournament.name;
+            if (dateEl) dateEl.value = db.currentTournament.date;
+        }
+
+        function setupRealtimeSubscriptions() {
+            supabase
+                .channel('public:bottcg')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'rounds_matchings' }, () => {
+                    loadCurrentTournamentFromSupabase().then(() => render());
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => {
+                    loadCurrentTournamentFromSupabase().then(() => render());
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments' }, () => {
+                    loadCurrentTournamentFromSupabase().then(() => render());
+                })
+                .subscribe();
+        }
+
+        // ==========================================
+        // 3. APPLICATION ACTIONS & LOGIC
+        // ==========================================
 
         function openLoginModal() { document.getElementById('login-modal').classList.remove('hidden'); }
         function closeLoginModal() { 
@@ -422,7 +519,7 @@
             db.admins.push({ user: u, pass: p });
             document.getElementById('new-admin-user').value = '';
             document.getElementById('new-admin-pass').value = '';
-            saveDB();
+            render();
         }
 
         function removeAdmin(username) {
@@ -430,7 +527,7 @@
             if (confirm(`คุณต้องการลบ Admin "${username}" หรือไม่?`)) {
                 db.admins = db.admins.filter(a => a.user !== username);
                 if (currentAdmin === username) logoutAdmin();
-                else saveDB();
+                else render();
             }
         }
 
@@ -459,14 +556,18 @@
             });
         }
 
-        function updateTourneyInfo() {
+        async function updateTourneyInfo() {
             const nameInput = document.getElementById('setup-tourney-name');
             const dateInput = document.getElementById('setup-tourney-date');
             
             db.currentTournament.name = nameInput ? nameInput.value.trim() || 'BOT TCG Tournament' : 'BOT TCG Tournament';
             db.currentTournament.date = dateInput ? dateInput.value.trim() : '';
             
-            saveDB();
+            await supabase
+                .from('tournaments')
+                .update({ name: db.currentTournament.name, date: db.currentTournament.date })
+                .eq('id', 'current-tournament');
+
             updatePairingsHeaderUI();
         }
 
@@ -505,65 +606,82 @@
             }
         }
 
-        function addPlayer() {
+        async function addPlayer() {
             const input = document.getElementById('player-name');
             const name = input.value.trim();
             if (!name) return;
-            db.currentTournament.players.push({ id: (Date.now() + Math.random()).toString(), name, isDropped: false });
+
+            const newId = 'p-' + Date.now();
+            await supabase.from('players').insert([{
+                id: newId,
+                tournament_id: 'current-tournament',
+                name: name,
+                is_dropped: false
+            }]);
+
             input.value = '';
-            saveDB();
+            await loadCurrentTournamentFromSupabase();
+            render();
         }
 
-        function addPlayersBulk() {
+        async function addPlayersBulk() {
             const area = document.getElementById('bulk-player-names');
             const lines = area.value.split('\n');
-            let addedCount = 0;
+            let rowsToInsert = [];
 
-            lines.forEach(line => {
+            lines.forEach((line, i) => {
                 const name = line.trim();
                 if (name) {
-                    db.currentTournament.players.push({
-                        id: (Date.now() + Math.random()).toString(),
+                    rowsToInsert.push({
+                        id: 'p-' + Date.now() + '-' + i,
+                        tournament_id: 'current-tournament',
                         name: name,
-                        isDropped: false
+                        is_dropped: false
                     });
-                    addedCount++;
                 }
             });
 
-            area.value = '';
-            saveDB();
-            if (addedCount > 0) alert(`เพิ่มผู้แข่งสำเร็จ ${addedCount} คน!`);
+            if (rowsToInsert.length > 0) {
+                await supabase.from('players').insert(rowsToInsert);
+                area.value = '';
+                await loadCurrentTournamentFromSupabase();
+                render();
+                alert(`เพิ่มผู้แข่งสำเร็จ ${rowsToInsert.length} คน!`);
+            }
         }
 
-        function editPlayerName(id) {
+        async function editPlayerName(id) {
             const p = db.currentTournament.players.find(x => x.id === id);
             if (!p) return;
             const newName = prompt('แก้ไขชื่อนักแข่ง:', p.name);
             if (newName && newName.trim()) {
-                p.name = newName.trim();
-                saveDB();
+                await supabase.from('players').update({ name: newName.trim() }).eq('id', id);
+                await loadCurrentTournamentFromSupabase();
+                render();
             }
         }
 
-        function removePlayer(id) {
-            db.currentTournament.players = db.currentTournament.players.filter(p => p.id !== id);
-            saveDB();
+        async function removePlayer(id) {
+            await supabase.from('players').delete().eq('id', id);
+            await loadCurrentTournamentFromSupabase();
+            render();
         }
 
-        function toggleDropPlayer(id) {
+        async function toggleDropPlayer(id) {
             const p = db.currentTournament.players.find(x => x.id === id);
             if (p) {
-                p.isDropped = !p.isDropped;
-                saveDB();
+                await supabase.from('players').update({ is_dropped: !p.isDropped }).eq('id', id);
+                await loadCurrentTournamentFromSupabase();
+                render();
             }
         }
 
-        function clearAllPlayers() {
-            if (confirm('คุณต้องการลบรายชื่อนักแข่งทั้งหมดในทัวร์นี้หรือไม่?')) {
-                db.currentTournament.players = [];
-                db.currentTournament.rounds = [];
-                saveDB();
+        async function clearAllPlayers() {
+            if (confirm('คุณต้องการลบรายชื่อนักแข่งและการจับคู่ทั้งหมดในทัวร์นี้หรือไม่?')) {
+                await supabase.from('rounds_matchings').delete().eq('tournament_id', 'current-tournament');
+                await supabase.from('players').delete().eq('tournament_id', 'current-tournament');
+                await loadCurrentTournamentFromSupabase();
+                render();
             }
         }
 
@@ -659,7 +777,7 @@
             });
         }
 
-        function generateNextRound() {
+        async function generateNextRound() {
             const activePlayers = db.currentTournament.players.filter(p => !p.isDropped);
             if (activePlayers.length < 2) return alert('ต้องมีนักแข่งอย่างน้อย 2 คนที่ยังไม่ออกจากทัวร์');
 
@@ -667,6 +785,7 @@
             let pool = [...standings];
             let matches = [];
             let tableNum = 1;
+            const newRoundNum = db.currentTournament.rounds.length + 1;
 
             if (pool.length % 2 !== 0) {
                 let byeIndex = pool.length - 1;
@@ -710,87 +829,77 @@
 
                 const p2 = pool.splice(pairedIndex, 1)[0];
                 matches.push({
-                    table: tableNum++,
+                    table: String(tableNum++),
                     player1: p1.id,
                     player2: p2.id,
                     result: ''
                 });
             }
 
-            db.currentTournament.rounds.push({
-                roundNum: db.currentTournament.rounds.length + 1,
-                matches: matches
-            });
+            const dbRows = matches.map(m => ({
+                tournament_id: 'current-tournament',
+                round_num: newRoundNum,
+                table_num: String(m.table),
+                player1_id: String(m.player1),
+                player2_id: String(m.player2),
+                result: m.result || ''
+            }));
 
-            saveDB();
-            renderPublicPairings();
+            const { error } = await supabase.from('rounds_matchings').insert(dbRows);
+            if (error) {
+                alert('เกิดข้อผิดพลาดในการสร้างสายแข่ง: ' + error.message);
+                return;
+            }
+
+            await loadCurrentTournamentFromSupabase();
+            render();
+            switchTab('pairings-public');
         }
 
-        function setMatchResult(roundIdx, matchIdx, result) {
-            db.currentTournament.rounds[roundIdx].matches[matchIdx].result = result;
-            saveDB();
+        async function setMatchResult(matchId, result) {
+            await supabase
+                .from('rounds_matchings')
+                .update({ result: result })
+                .eq('id', matchId);
+
+            await loadCurrentTournamentFromSupabase();
+            render();
         }
 
-        function resetCurrentTournament() {
+        async function resetCurrentTournament() {
             if (confirm('คุณแน่ใจหรือไม่ที่จะรีเซ็ตข้อมูลรอบและการจับคู่ทั้งหมดของทัวร์นี้?')) {
-                db.currentTournament.rounds = [];
-                saveDB();
+                await supabase.from('rounds_matchings').delete().eq('tournament_id', 'current-tournament');
+                await loadCurrentTournamentFromSupabase();
+                render();
             }
         }
 
-        function saveAndFinishTournament() {
+        async function saveAndFinishTournament() {
             if (db.currentTournament.rounds.length === 0) return alert('ยังไม่มีรอบการแข่งขันให้บันทึก');
             if (confirm('คุณต้องการจบทัวร์นาเมนต์นี้ และบันทึกคะแนนสะสมเข้าสู่ Leaderboard ประจำเดือนใช่หรือไม่?')) {
                 db.history.unshift({
-                    id: db.currentTournament.id,
+                    id: Date.now(),
                     name: db.currentTournament.name,
                     date: db.currentTournament.date,
                     standings: calculateStandings()
                 });
 
-                db.currentTournament = {
-                    id: Date.now(),
+                await supabase.from('rounds_matchings').delete().eq('tournament_id', 'current-tournament');
+                await supabase.from('players').delete().eq('tournament_id', 'current-tournament');
+                await supabase.from('tournaments').update({
                     name: 'BOT TCG Tournament',
-                    date: new Date().toLocaleDateString('th-TH'),
-                    players: [],
-                    rounds: []
-                };
+                    date: new Date().toLocaleDateString('th-TH')
+                }).eq('id', 'current-tournament');
 
-                saveDB();
+                await loadCurrentTournamentFromSupabase();
                 switchTab('dashboard');
+                render();
             }
         }
 
-        function exportData() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", `bottcg_backup_${Date.now()}.json`);
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
-        }
-
-        function importData() {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'application/json';
-            input.onchange = e => {
-                const file = e.target.files[0];
-                const reader = new FileReader();
-                reader.onload = event => {
-                    try {
-                        db = JSON.parse(event.target.result);
-                        saveDB();
-                        alert('นำเข้าข้อมูลเรียบร้อยแล้ว!');
-                    } catch (err) {
-                        alert('ไฟล์ JSON ไม่ถูกต้อง');
-                    }
-                };
-                reader.readAsText(file);
-            };
-            input.click();
-        }
+        // ==========================================
+        // 4. RENDERING & UI FUNCTIONS
+        // ==========================================
 
         function render() {
             renderAdminAuthBtn();
@@ -1029,8 +1138,8 @@
             }
 
             round.matches.forEach(m => {
-                const p1 = db.currentTournament.players.find(p => p.id === m.player1) || { name: m.player1Name || 'BYE' };
-                const p2 = db.currentTournament.players.find(p => p.id === m.player2) || { name: m.player2Name || 'BYE' };
+                const p1 = db.currentTournament.players.find(p => p.id === m.player1) || { name: m.player1 || 'BYE' };
+                const p2 = db.currentTournament.players.find(p => p.id === m.player2) || { name: m.player2 || 'BYE' };
 
                 if (filter && !p1.name.toLowerCase().includes(filter) && !p2.name.toLowerCase().includes(filter) && !m.table.toString().includes(filter)) {
                     return;
@@ -1063,9 +1172,9 @@
                 return;
             }
 
-            round.matches.forEach((m, idx) => {
-                const p1 = db.currentTournament.players.find(p => p.id === m.player1) || { name: m.player1Name || 'BYE' };
-                const p2 = db.currentTournament.players.find(p => p.id === m.player2) || { name: m.player2Name || 'BYE' };
+            round.matches.forEach(m => {
+                const p1 = db.currentTournament.players.find(p => p.id === m.player1) || { name: m.player1 || 'BYE' };
+                const p2 = db.currentTournament.players.find(p => p.id === m.player2) || { name: m.player2 || 'BYE' };
 
                 const btnClass = (val) => m.result === val 
                     ? "bg-blue-600 text-white font-bold border-blue-400" 
@@ -1083,10 +1192,10 @@
                             <span class="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded border border-emerald-500/30">BYE (+3 PTS)</span>
                         ` : `
                             <div class="flex gap-1.5 w-full sm:w-auto justify-end">
-                                <button onclick="setMatchResult(${roundIdx}, ${idx}, '1-0')" class="px-3 py-1 rounded text-xs border transition ${btnClass('1-0')}">${p1.name} Win</button>
-                                <button onclick="setMatchResult(${roundIdx}, ${idx}, '0-1')" class="px-3 py-1 rounded text-xs border transition ${btnClass('0-1')}">${p2.name} Win</button>
-                                <button onclick="setMatchResult(${roundIdx}, ${idx}, '0.5-0.5')" class="px-3 py-1 rounded text-xs border transition ${btnClass('0.5-0.5')}">เสมอ</button>
-                                <button onclick="setMatchResult(${roundIdx}, ${idx}, '')" class="px-2 py-1 rounded text-xs border border-slate-800 bg-slate-950 text-slate-500 hover:text-slate-300">✕</button>
+                                <button onclick="setMatchResult('${m.id}', '1-0')" class="px-3 py-1 rounded text-xs border transition ${btnClass('1-0')}">${p1.name} Win</button>
+                                <button onclick="setMatchResult('${m.id}', '0-1')" class="px-3 py-1 rounded text-xs border transition ${btnClass('0-1')}">${p2.name} Win</button>
+                                <button onclick="setMatchResult('${m.id}', '0.5-0.5')" class="px-3 py-1 rounded text-xs border transition ${btnClass('0.5-0.5')}">เสมอ</button>
+                                <button onclick="setMatchResult('${m.id}', '')" class="px-2 py-1 rounded text-xs border border-slate-800 bg-slate-950 text-slate-500 hover:text-slate-300">✕</button>
                             </div>
                         `}
                     </div>
@@ -1094,38 +1203,11 @@
             });
         }
 
-        // Initialize App: โหลดหน้าเว็บปุ๊บ วิ่งไปดึงข้อมูลล่าสุดจาก Google Sheets ทันที
+        // ==========================================
+        // 5. START APPLICATION
+        // ==========================================
         window.addEventListener('DOMContentLoaded', () => {
-            if (typeof google !== 'undefined' && google.script) {
-                google.script.run
-                    .withSuccessHandler((serverData) => {
-                        if (serverData && serverData.success) {
-                            db.currentTournament.name = serverData.name || db.currentTournament.name;
-                            db.currentTournament.date = serverData.date || db.currentTournament.date;
-                            
-                            if (serverData.players && serverData.players.length > 0) {
-                                db.currentTournament.players = serverData.players;
-                            }
-                            if (serverData.rounds && serverData.rounds.length > 0) {
-                                db.currentTournament.rounds = serverData.rounds;
-                            }
-                            
-                            const nameInput = document.getElementById('setup-tourney-name');
-                            const dateInput = document.getElementById('setup-tourney-date');
-                            if (nameInput) nameInput.value = db.currentTournament.name || '';
-                            if (dateInput) dateInput.value = db.currentTournament.date || '';
-                            
-                            render();
-                        }
-                    })
-                    .getTournamentData();
-            } else {
-                const nameInput = document.getElementById('setup-tourney-name');
-                const dateInput = document.getElementById('setup-tourney-date');
-                if (nameInput) nameInput.value = db.currentTournament.name || '';
-                if (dateInput) dateInput.value = db.currentTournament.date || '';
-                render();
-            }
+            initDatabase();
         });
     </script>
 </body>
