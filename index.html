@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BOT TCG - Swiss-Round & Leaderboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- โหลด Supabase JS ตัวล่าสุด -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
     <style>
@@ -58,6 +59,9 @@
 </head>
 <body class="text-slate-100 min-h-screen p-4 md:p-8">
 
+    <!-- แถบแจ้งเตือน Error ฉุกเฉินด้านบนสุด (ถ้ามีปัญหาจะโผล่มาบอกตรงนี้ทันที) -->
+    <div id="error-alert-box" class="hidden max-w-6xl mx-auto mb-4 bg-red-900/80 border border-red-500 text-red-200 px-4 py-3 rounded-xl text-xs sm:text-sm font-mono"></div>
+
     <div class="max-w-6xl mx-auto space-y-6">
         <!-- Header -->
         <header class="flex flex-col md:flex-row justify-between items-center cyber-card cyber-card-glow p-6 rounded-2xl gap-4 relative overflow-hidden">
@@ -71,7 +75,7 @@
                         <h1 class="text-2xl md:text-3xl font-extrabold tracking-wide font-cyber bg-gradient-to-r from-emerald-400 via-teal-200 to-cyan-400 bg-clip-text text-transparent">
                             BOT TCG TOURNAMENT
                         </h1>
-                        <span id="db-status-badge" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">Connecting...</span>
+                        <span id="db-status-badge" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700 font-mono">Connecting...</span>
                     </div>
                     <p class="text-xs text-emerald-400/80 font-mono tracking-widest uppercase">SWISS-ROUND & MONTHLY LEADERBOARD</p>
                 </div>
@@ -346,11 +350,12 @@
 
     <script>
         // ==========================================
-        // 1. SUPABASE CONNECTION CONFIG
+        // 1. GLOBAL VARIABLES & CONFIG
         // ==========================================
         const SUPABASE_URL = 'https://rtxhddeaefdmjfuddyhm.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_kOb2bN4u8OfNEvIUcDbiPQ_gFoHx8QP';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let supabase;
 
         const DEFAULT_ADMINS = [
             { user: 'admin', pass: 'botsswr2025' },
@@ -366,67 +371,80 @@
 
         let currentAdmin = JSON.parse(sessionStorage.getItem('tcg_active_admin')) || null;
 
-        // ==========================================
-        // 2. SUPABASE DATABASE SYNC & REALTIME
-        // ==========================================
-
-        async function initDatabase() {
-            setDbStatus('Connecting...', 'text-amber-400 border-amber-500/40 bg-amber-500/10');
-            try {
-                await loadCurrentTournamentFromSupabase();
-                setupRealtimeSubscriptions();
-                setDbStatus('Online (Realtime)', 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10');
-            } catch (err) {
-                console.error('Database connection error:', err);
-                setDbStatus('Offline / Error', 'text-red-400 border-red-500/40 bg-red-500/10');
+        function showAppError(msg) {
+            const el = document.getElementById('error-alert-box');
+            if (el) {
+                el.classList.remove('hidden');
+                el.innerHTML = `⚠️ <b>DATABASE ERROR:</b> ${msg}`;
             }
-            render();
+            setDbStatus('Error (ดูข้อความเตือน)', 'text-red-400 border-red-500/40 bg-red-500/10');
+            console.error('APP ERROR:', msg);
         }
 
         function setDbStatus(text, className) {
             const badge = document.getElementById('db-status-badge');
             if (badge) {
                 badge.innerText = text;
-                badge.className = `text-[10px] px-2.5 py-0.5 rounded-full border ${className}`;
+                badge.className = `text-[10px] px-2.5 py-0.5 rounded-full border font-mono ${className}`;
             }
+        }
+
+        // ==========================================
+        // 2. SUPABASE INITIALIZATION & CLIENT
+        // ==========================================
+        async function initDatabase() {
+            setDbStatus('Connecting...', 'text-amber-400 border-amber-500/40 bg-amber-500/10');
+            
+            // เช็คว่า Library Supabase โหลดเสร็จหรือยัง
+            if (typeof window.supabase === 'undefined' || !window.supabase.createClient) {
+                showAppError('โหลดไลบรารี Supabase ไม่สำเร็จ (โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ต)');
+                render();
+                return;
+            }
+
+            try {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                await loadCurrentTournamentFromSupabase();
+                setupRealtimeSubscriptions();
+                setDbStatus('Online (Realtime)', 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10');
+            } catch (err) {
+                showAppError(err.message || JSON.stringify(err));
+            }
+            
+            render();
         }
 
         async function loadCurrentTournamentFromSupabase() {
             const tourneyId = 'current-tournament';
 
-            // 1. ดึงทัวร์นาเมนต์
+            // 1. ดึงข้อมูลทัวร์นาเมนต์
             const { data: tourneyData, error: tourneyErr } = await supabase
                 .from('tournaments')
                 .select('*')
                 .eq('id', tourneyId)
                 .maybeSingle();
 
-            if (tourneyErr) {
-                console.error('Error loading tournament:', tourneyErr.message);
-                throw tourneyErr;
-            }
+            if (tourneyErr) throw new Error(`ตาราง tournaments: ${tourneyErr.message}`);
 
             if (tourneyData) {
                 db.currentTournament.name = tourneyData.name || 'BOT TCG Tournament';
                 db.currentTournament.date = tourneyData.date || '';
             } else {
-                await supabase.from('tournaments').insert([{
+                const { error: insErr } = await supabase.from('tournaments').insert([{
                     id: tourneyId,
                     name: db.currentTournament.name,
                     date: db.currentTournament.date
                 }]);
+                if (insErr) throw new Error(`สร้าง row เริ่มต้นใน tournaments ผิดพลาด: ${insErr.message}`);
             }
 
-            // 2. ดึง Players
+            // 2. ดึงรายชื่อผู้เล่น
             const { data: playersData, error: playersErr } = await supabase
                 .from('players')
                 .select('*')
                 .eq('tournament_id', tourneyId);
 
-            if (playersErr) {
-                console.error('Error loading players:', playersErr.message);
-                throw playersErr;
-            }
+            if (playersErr) throw new Error(`ตาราง players: ${playersErr.message}`);
 
             if (playersData) {
                 db.currentTournament.players = playersData.map(p => ({
@@ -436,7 +454,7 @@
                 }));
             }
 
-            // 3. ดึง Matches & จัดกลุ่มรอบ
+            // 3. ดึงผลการแข่งแต่ละรอบ
             const { data: matchesData, error: matchesErr } = await supabase
                 .from('rounds_matchings')
                 .select('*')
@@ -444,10 +462,7 @@
                 .order('round_num', { ascending: true })
                 .order('table_num', { ascending: true });
 
-            if (matchesErr) {
-                console.error('Error loading rounds:', matchesErr.message);
-                throw matchesErr;
-            }
+            if (matchesErr) throw new Error(`ตาราง rounds_matchings: ${matchesErr.message}`);
 
             let roundsMap = {};
             if (matchesData) {
@@ -469,7 +484,7 @@
                 matches: roundsMap[rNum]
             }));
 
-            // อัปเดตช่อง Input ในหน้า Admin
+            // อัปเดตช่อง input ในระบบ Admin
             const nameEl = document.getElementById('setup-tourney-name');
             const dateEl = document.getElementById('setup-tourney-date');
             if (nameEl) nameEl.value = db.currentTournament.name;
@@ -478,15 +493,15 @@
 
         function setupRealtimeSubscriptions() {
             supabase
-                .channel('public:bottcg')
+                .channel('public:bottcg_realtime')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'rounds_matchings' }, () => {
-                    loadCurrentTournamentFromSupabase().then(() => render());
+                    loadCurrentTournamentFromSupabase().then(() => render()).catch(e => showAppError(e.message));
                 })
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => {
-                    loadCurrentTournamentFromSupabase().then(() => render());
+                    loadCurrentTournamentFromSupabase().then(() => render()).catch(e => showAppError(e.message));
                 })
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments' }, () => {
-                    loadCurrentTournamentFromSupabase().then(() => render());
+                    loadCurrentTournamentFromSupabase().then(() => render()).catch(e => showAppError(e.message));
                 })
                 .subscribe();
         }
@@ -494,7 +509,6 @@
         // ==========================================
         // 3. APPLICATION ACTIONS & LOGIC
         // ==========================================
-
         function openLoginModal() { document.getElementById('login-modal').classList.remove('hidden'); }
         function closeLoginModal() { 
             document.getElementById('login-modal').classList.add('hidden');
@@ -627,12 +641,14 @@
             if (!name) return;
 
             const newId = 'p-' + Date.now();
-            await supabase.from('players').insert([{
+            const { error } = await supabase.from('players').insert([{
                 id: newId,
                 tournament_id: 'current-tournament',
                 name: name,
                 is_dropped: false
             }]);
+
+            if (error) return alert('เพิ่มผู้เล่นไม่สำเร็จ: ' + error.message);
 
             input.value = '';
             await loadCurrentTournamentFromSupabase();
@@ -657,7 +673,9 @@
             });
 
             if (rowsToInsert.length > 0) {
-                await supabase.from('players').insert(rowsToInsert);
+                const { error } = await supabase.from('players').insert(rowsToInsert);
+                if (error) return alert('เพิ่มรายชื่อไม่สำเร็จ: ' + error.message);
+
                 area.value = '';
                 await loadCurrentTournamentFromSupabase();
                 render();
@@ -861,10 +879,7 @@
             }));
 
             const { error } = await supabase.from('rounds_matchings').insert(dbRows);
-            if (error) {
-                alert('เกิดข้อผิดพลาดในการสร้างสายแข่ง: ' + error.message);
-                return;
-            }
+            if (error) return alert('เกิดข้อผิดพลาดในการสร้างสายแข่ง: ' + error.message);
 
             await loadCurrentTournamentFromSupabase();
             render();
@@ -915,7 +930,6 @@
         // ==========================================
         // 4. RENDERING & UI FUNCTIONS
         // ==========================================
-
         function render() {
             renderAdminAuthBtn();
             renderDashboard();
