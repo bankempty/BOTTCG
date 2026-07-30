@@ -361,12 +361,17 @@
 
         async function loadDataFromSupabase() {
             try {
-                const { data: tourneyData } = await supabaseClient.from('tournaments').select('*').order('id', { ascending: false }).limit(1);
+                // BUG FIX #1: Supabase v2 returns {data,error} — does NOT throw. Must check error.
+                const { data: tourneyData, error: e1 } = await supabaseClient.from('tournaments').select('*').order('id', { ascending: false }).limit(1);
+                if (e1) throw e1;
                 if (tourneyData && tourneyData.length > 0) {
                     db.currentTournament = tourneyData[0];
+                    if (!Array.isArray(db.currentTournament.players)) db.currentTournament.players = [];
+                    if (!Array.isArray(db.currentTournament.rounds)) db.currentTournament.rounds = [];
                 }
 
-                const { data: adminData } = await supabaseClient.from('admins').select('*');
+                const { data: adminData, error: e2 } = await supabaseClient.from('admins').select('*');
+                if (e2) throw e2;
                 if (adminData && adminData.length > 0) {
                     db.admins = adminData;
                 } else {
@@ -377,28 +382,33 @@
                     ];
                 }
 
-                const { data: historyData } = await supabaseClient.from('history').select('*');
+                const { data: historyData, error: e3 } = await supabaseClient.from('history').select('*');
+                if (e3) throw e3;
                 if (historyData) {
                     db.history = historyData;
                 }
             } catch (err) {
                 console.error("Error loading from Supabase:", err);
+                alert('⚠️ โหลดข้อมูลจาก Supabase ไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อแล้วรีเฟรชหน้า\n' + (err.message || JSON.stringify(err)));
             }
         }
 
         async function saveDB() {
             render();
             try {
-                await supabaseClient.from('tournaments').upsert({
+                // BUG FIX #2: Supabase v2 never throws — must destructure error
+                const { error } = await supabaseClient.from('tournaments').upsert({
                     id: db.currentTournament.id,
                     name: db.currentTournament.name,
                     date: db.currentTournament.date,
                     players: db.currentTournament.players,
                     rounds: db.currentTournament.rounds
                 });
+                if (error) throw error;
                 console.log("✅ Synced to Supabase successfully!");
             } catch (err) {
                 console.error("❌ Supabase sync failed:", err);
+                alert('❌ บันทึกลง Supabase ไม่สำเร็จ: ' + (err.message || JSON.stringify(err)));
             }
         }
 
@@ -440,8 +450,11 @@
             if (db.admins.some(a => a.user === u)) return alert('Username นี้มีอยู่ในระบบแล้ว');
             
             db.admins.push({ user: u, pass: p });
-            await supabaseClient.from('admins').insert([{ user: u, pass: p }]);
-            
+            const { error: adminErr } = await supabaseClient.from('admins').insert([{ user: u, pass: p }]);
+            if (adminErr) {
+                db.admins.pop(); // revert optimistic update
+                return alert('❌ เพิ่ม Admin ไม่สำเร็จ: ' + adminErr.message);
+            }
             document.getElementById('new-admin-user').value = '';
             document.getElementById('new-admin-pass').value = '';
             saveDB();
@@ -626,6 +639,11 @@
                 `).join('');
             }
 
+            // BUG FIX #4: show/hide admin-only elements inside sections (e.g. จบทัวร์นาเมนต์ button)
+            document.querySelectorAll('section .admin-only').forEach(el => {
+                el.classList.toggle('hidden', !currentAdmin);
+            });
+
             renderRoundSelects();
             renderStandings();
             renderDashboard();
@@ -718,7 +736,11 @@
             if (rounds.length === 0) optionsHtml = '<option value="">ยังไม่มีรอบแข่งขัน</option>';
 
             if (adminSelect) adminSelect.innerHTML = optionsHtml;
-            if (publicSelect) publicSelect.innerHTML = optionsHtml;
+            if (publicSelect) {
+                publicSelect.innerHTML = optionsHtml;
+                // BUG FIX #5: auto-select latest round so customers see current round, not always Round 1
+                if (rounds.length > 0) publicSelect.value = rounds.length - 1;
+            }
 
             renderAdminPairings();
             renderPublicPairings();
@@ -837,9 +859,22 @@
 
             db.currentTournament.rounds.push({ completed: false, matches: matches });
             saveDB();
-            document.getElementById('admin-round-select').value = db.currentTournament.rounds.length - 1;
+            const newRoundIdx = db.currentTournament.rounds.length - 1;
+            document.getElementById('admin-round-select').value = newRoundIdx;
+            // BUG FIX #6: sync public select so customers immediately see the new round
+            const pubSel = document.getElementById('public-round-select');
+            if (pubSel) pubSel.value = newRoundIdx;
             renderAdminPairings();
+            renderPublicPairings();
             alert('จับคู่รอบถัดไปสำเร็จ!');
+        }
+
+        // BUG FIX #8: This function was called from HTML but never defined
+        async function resetCurrentTournament() {
+            if (!confirm('⚠️ ต้องการ Reset ทัวร์นาเมนต์ปัจจุบันทั้งหมดใช่หรือไม่?\n(รายชื่อผู้แข่งขันและรอบทั้งหมดจะถูกลบออก)')) return;
+            db.currentTournament = { id: Date.now(), name: 'BOT TCG Tournament', date: '', players: [], rounds: [] };
+            await saveDB();
+            alert('Reset ทัวร์นาเมนต์เรียบร้อยแล้ว');
         }
 
         function setMatchResult(roundIdx, matchIdx, result) {
@@ -854,15 +889,26 @@
         async function saveAndFinishTournament() {
             if (!confirm('ต้องการจบทัวร์นาเมนต์และบันทึกประวัติลงระบบใช่หรือไม่?')) return;
             
+            // BUG FIX #7: calculateStandings() returns {opponents: Set} which is NOT JSON-serializable.
+            // Strip the Set (and other non-serializable fields) before saving to Supabase.
+            const serializableStandings = calculateStandings().map(s => ({
+                id: s.id, name: s.name, status: s.status,
+                played: s.played, wins: s.wins, losses: s.losses, draws: s.draws,
+                points: s.points, omwp: s.omwp, oomwp: s.oomwp
+            }));
             let historyItem = {
                 id: Date.now(),
                 name: db.currentTournament.name,
                 date: db.currentTournament.date || new Date().toLocaleDateString(),
-                standings: calculateStandings()
+                standings: serializableStandings
             };
 
             db.history.push(historyItem);
-            await supabaseClient.from('history').insert([historyItem]);
+            const { error: histErr } = await supabaseClient.from('history').insert([historyItem]);
+            if (histErr) {
+                db.history.pop();
+                return alert('❌ บันทึกประวัติไม่สำเร็จ: ' + histErr.message);
+            }
 
             db.currentTournament = { id: Date.now(), name: 'BOT TCG Tournament', date: '', players: [], rounds: [] };
             await saveDB();
