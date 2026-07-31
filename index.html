@@ -736,14 +736,31 @@
             const publicSelect = document.getElementById('public-round-select');
             const rounds = db.currentTournament.rounds;
 
+            // BUG FIX: save current selections BEFORE resetting innerHTML
+            // (setting innerHTML resets the select value to first option)
+            const savedAdminVal = adminSelect ? adminSelect.value : null;
+            const savedPublicVal = publicSelect ? publicSelect.value : null;
+
             let optionsHtml = rounds.map((r, idx) => `<option value="${idx}">Round ${idx + 1} ${r.completed ? '✅' : '⏳'}</option>`).join('');
             if (rounds.length === 0) optionsHtml = '<option value="">ยังไม่มีรอบแข่งขัน</option>';
 
-            if (adminSelect) adminSelect.innerHTML = optionsHtml;
+            if (adminSelect) {
+                adminSelect.innerHTML = optionsHtml;
+                // restore previous round if still valid, else stay on latest
+                if (savedAdminVal !== null && savedAdminVal !== '' && parseInt(savedAdminVal) < rounds.length) {
+                    adminSelect.value = savedAdminVal;
+                } else if (rounds.length > 0) {
+                    adminSelect.value = rounds.length - 1;
+                }
+            }
             if (publicSelect) {
                 publicSelect.innerHTML = optionsHtml;
-                // BUG FIX #5: auto-select latest round so customers see current round, not always Round 1
-                if (rounds.length > 0) publicSelect.value = rounds.length - 1;
+                // restore public selection if still valid, else default to latest round
+                if (savedPublicVal !== null && savedPublicVal !== '' && parseInt(savedPublicVal) < rounds.length) {
+                    publicSelect.value = savedPublicVal;
+                } else if (rounds.length > 0) {
+                    publicSelect.value = rounds.length - 1;
+                }
             }
 
             renderAdminPairings();
