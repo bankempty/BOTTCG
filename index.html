@@ -70,6 +70,7 @@
                         BOT TCG TOURNAMENT
                     </h1>
                     <p class="text-xs text-emerald-400/80 font-mono tracking-widest uppercase">SWISS-ROUND & MONTHLY LEADERBOARD</p>
+                <span id="branch-badge" class="hidden text-xs font-mono bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 px-3 py-0.5 rounded-full mt-1 inline-block"></span>
                 </div>
             </div>
             
@@ -80,6 +81,14 @@
                 <div id="admin-auth-btn"></div>
             </div>
         </header>
+
+        <!-- Branch Selector (Public) -->
+        <div id="branch-selector-wrap" class="flex flex-wrap gap-2 no-print">
+            <span class="text-xs text-slate-500 self-center font-mono">🏪 เลือกสาขา:</span>
+            <button onclick="selectPublicBranch('สุพรีมสามเสน')" id="branch-btn-สุพรีมสามเสน" class="px-4 py-1.5 rounded-xl text-xs font-bold transition border border-emerald-500/40 text-emerald-400 bg-emerald-500/10">สุพรีมสามเสน</button>
+            <button onclick="selectPublicBranch('ชลบุรี')" id="branch-btn-ชลบุรี" class="px-4 py-1.5 rounded-xl text-xs font-bold transition border border-slate-700 text-slate-400 hover:text-slate-200">ชลบุรี</button>
+            <button onclick="selectPublicBranch('ศรีราชา')" id="branch-btn-ศรีราชา" class="px-4 py-1.5 rounded-xl text-xs font-bold transition border border-slate-700 text-slate-400 hover:text-slate-200">ศรีราชา</button>
+        </div>
 
         <!-- Navigation Tabs -->
         <div class="flex flex-wrap gap-2 border-b border-slate-800/80 pb-2 no-print">
@@ -292,6 +301,28 @@
                 <h3 class="text-sm font-semibold text-slate-400 mb-3 pb-2 border-b border-slate-800">รายชื่อ Admin ในระบบ</h3>
                 <ul id="admin-list" class="divide-y divide-slate-800/60 text-sm"></ul>
             </div>
+
+            <!-- ลบข้อมูล -->
+            <div class="cyber-card-admin p-6 rounded-2xl border border-red-500/20 space-y-4">
+                <h2 class="text-md font-bold text-red-400 font-cyber tracking-wider uppercase flex items-center gap-2">
+                    <span>🗑️</span> จัดการ / ลบข้อมูล
+                </h2>
+                <p class="text-xs text-slate-500">การลบข้อมูลไม่สามารถกู้คืนได้ กรุณาตรวจสอบก่อนกด</p>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <button onclick="deleteCurrentTournament()" class="bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/30 px-4 py-3 rounded-xl text-xs font-bold transition text-left space-y-1">
+                        <div>🏆 ลบ Tournament ปัจจุบัน</div>
+                        <div class="text-orange-400/60 font-normal">ลบผู้แข่ง + รอบทั้งหมด</div>
+                    </button>
+                    <button onclick="deleteAllHistory()" class="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 px-4 py-3 rounded-xl text-xs font-bold transition text-left space-y-1">
+                        <div>📂 ลบประวัติทั้งหมด</div>
+                        <div class="text-red-400/60 font-normal">ลบ history ทุกรายการ</div>
+                    </button>
+                    <button onclick="factoryReset()" class="bg-red-900/20 hover:bg-red-900/40 text-red-500 border border-red-700/40 px-4 py-3 rounded-xl text-xs font-bold transition text-left space-y-1">
+                        <div>⚠️ Factory Reset</div>
+                        <div class="text-red-500/60 font-normal">ลบทุกอย่างในระบบ</div>
+                    </button>
+                </div>
+            </div>
         </section>
     </div>
 
@@ -354,8 +385,14 @@
         };
 
         let currentAdmin = sessionStorage.getItem('tcg_active_admin') || null;
+        let currentBranch = sessionStorage.getItem('tcg_active_branch') || null;
 
         async function initApp() {
+            // restore branch from session (public user may have selected before)
+            if (!currentBranch) {
+                currentBranch = sessionStorage.getItem('tcg_active_branch') || 'สุพรีมสามเสน';
+                sessionStorage.setItem('tcg_active_branch', currentBranch);
+            }
             await loadDataFromSupabase();
             render();
         }
@@ -363,7 +400,10 @@
         async function loadDataFromSupabase() {
             try {
                 // BUG FIX #1: Supabase v2 returns {data,error} — does NOT throw. Must check error.
-                const { data: tourneyData, error: e1 } = await supabaseClient.from('tournaments').select('*').order('id', { ascending: false }).limit(1);
+                // filter tournament by branch
+                let tourneyQuery = supabaseClient.from('tournaments').select('*').order('id', { ascending: false }).limit(1);
+                if (currentBranch) tourneyQuery = tourneyQuery.eq('branch', currentBranch);
+                const { data: tourneyData, error: e1 } = await tourneyQuery;
                 if (e1) throw e1;
                 if (tourneyData && tourneyData.length > 0) {
                     db.currentTournament = tourneyData[0];
@@ -383,7 +423,9 @@
                     ];
                 }
 
-                const { data: historyData, error: e3 } = await supabaseClient.from('history').select('*');
+                let histQuery = supabaseClient.from('history').select('*');
+                if (currentBranch) histQuery = histQuery.eq('branch', currentBranch);
+                const { data: historyData, error: e3 } = await histQuery;
                 if (e3) throw e3;
                 if (historyData) {
                     db.history = historyData;
@@ -403,7 +445,8 @@
                     name: db.currentTournament.name,
                     date: db.currentTournament.date,
                     players: db.currentTournament.players,
-                    rounds: db.currentTournament.rounds
+                    rounds: db.currentTournament.rounds,
+                    branch: currentBranch || 'สุพรีมสามเสน'
                 });
                 if (error) throw error;
                 console.log("✅ Synced to Supabase successfully!");
@@ -422,15 +465,19 @@
         function openTiebreakModal() { document.getElementById('tiebreak-modal').classList.remove('hidden'); }
         function closeTiebreakModal() { document.getElementById('tiebreak-modal').classList.add('hidden'); }
 
-        function submitAdminLogin() {
+        async function submitAdminLogin() {
             const u = document.getElementById('login-user').value.trim();
             const p = document.getElementById('login-pass').value.trim();
             const found = db.admins.find(a => a.user === u && a.pass === p);
 
             if (found) {
                 currentAdmin = found.user;
+                currentBranch = found.branch || 'สุพรีมสามเสน';
                 sessionStorage.setItem('tcg_active_admin', currentAdmin);
+                sessionStorage.setItem('tcg_active_branch', currentBranch);
                 closeLoginModal();
+                // reload data filtered by new branch
+                await loadDataFromSupabase();
                 render();
             } else {
                 alert('Username หรือ Password ไม่ถูกต้อง');
@@ -439,7 +486,9 @@
 
         function logoutAdmin() {
             currentAdmin = null;
+            currentBranch = null;
             sessionStorage.removeItem('tcg_active_admin');
+            sessionStorage.removeItem('tcg_active_branch');
             switchTab('dashboard');
             render();
         }
@@ -648,6 +697,7 @@
                 el.classList.toggle('hidden', !currentAdmin);
             });
 
+            updateBranchUI();
             renderRoundSelects();
             renderStandings();
             renderDashboard();
@@ -893,7 +943,7 @@
         // BUG FIX #8: This function was called from HTML but never defined
         async function resetCurrentTournament() {
             if (!confirm('⚠️ ต้องการ Reset ทัวร์นาเมนต์ปัจจุบันทั้งหมดใช่หรือไม่?\n(รายชื่อผู้แข่งขันและรอบทั้งหมดจะถูกลบออก)')) return;
-            db.currentTournament = { id: Date.now(), name: 'BOT TCG Tournament', date: '', players: [], rounds: [] };
+            db.currentTournament = { id: Date.now(), name: 'BOT TCG Tournament', date: '', players: [], rounds: [], branch: currentBranch || 'สุพรีมสามเสน' };
             await saveDB();
             alert('Reset ทัวร์นาเมนต์เรียบร้อยแล้ว');
         }
@@ -921,7 +971,8 @@
                 id: Date.now(),
                 name: db.currentTournament.name,
                 date: db.currentTournament.date || new Date().toLocaleDateString(),
-                standings: serializableStandings
+                standings: serializableStandings,
+                branch: currentBranch || 'สุพรีมสามเสน'
             };
 
             db.history.push(historyItem);
@@ -974,11 +1025,88 @@
                         <h3 class="font-bold text-emerald-400 font-cyber text-base">${h.name}</h3>
                         <span class="text-xs font-mono text-slate-400">📅 ${h.date}</span>
                     </div>
-                    <div class="text-xs text-slate-300">
-                        <span class="font-bold text-slate-200">แชมป์ประจำรายการ:</span> ${h.standings[0] ? h.standings[0].name : '-'}
+                    <div class="flex justify-between items-center">
+                        <div class="text-xs text-slate-300">
+                            <span class="font-bold text-slate-200">แชมป์ประจำรายการ:</span> ${h.standings[0] ? h.standings[0].name : '-'}
+                        </div>
+                        ${currentAdmin ? `<button onclick="deleteHistoryEntry(${h.id})" class="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition">🗑️ ลบ</button>` : ''}
                     </div>
                 </div>
             `).join('') || '<div class="text-center text-slate-500 py-10">ยังไม่มีประวัติการแข่งขันย้อนหลัง</div>';
+        }
+
+        const BRANCHES = ['สุพรีมสามเสน', 'ชลบุรี', 'ศรีราชา'];
+
+        async function selectPublicBranch(branch) {
+            // ถ้า admin login อยู่ไม่ให้เปลี่ยนสาขาผ่านปุ่มนี้
+            if (currentAdmin) return;
+            currentBranch = branch;
+            sessionStorage.setItem('tcg_active_branch', branch);
+            await loadDataFromSupabase();
+            render();
+            updateBranchUI();
+        }
+
+        function updateBranchUI() {
+            const activeBranch = currentBranch || 'สุพรีมสามเสน';
+            BRANCHES.forEach(b => {
+                const btn = document.getElementById('branch-btn-' + b);
+                if (!btn) return;
+                if (b === activeBranch) {
+                    btn.className = 'px-4 py-1.5 rounded-xl text-xs font-bold transition border border-emerald-500/40 text-emerald-400 bg-emerald-500/10';
+                } else {
+                    btn.className = 'px-4 py-1.5 rounded-xl text-xs font-bold transition border border-slate-700 text-slate-400 hover:text-slate-200';
+                }
+            });
+            // ซ่อน branch selector ถ้า admin login (admin มีสาขาตายตัว)
+            const wrap = document.getElementById('branch-selector-wrap');
+            if (wrap) wrap.classList.toggle('hidden', !!currentAdmin);
+
+            // แสดง branch badge ใน header ถ้าเลือกสาขา
+            const badgeEl = document.getElementById('branch-badge');
+            if (badgeEl) {
+                badgeEl.innerText = '🏪 ' + activeBranch;
+                badgeEl.classList.remove('hidden');
+            }
+        }
+
+        async function deleteAllHistory() {
+            if (!confirm('⚠️ ต้องการลบประวัติการแข่งขันทั้งหมดใช่หรือไม่?\nข้อมูลจะหายถาวร ไม่สามารถกู้คืนได้')) return;
+            const { error } = await supabaseClient.from('history').delete().neq('id', 0);
+            if (error) return alert('❌ ลบไม่สำเร็จ: ' + error.message);
+            db.history = [];
+            render();
+            alert('✅ ลบประวัติทั้งหมดเรียบร้อยแล้ว');
+        }
+
+        async function deleteHistoryEntry(id) {
+            if (!confirm('ต้องการลบประวัติรายการนี้ใช่หรือไม่?')) return;
+            const { error } = await supabaseClient.from('history').delete().eq('id', id);
+            if (error) return alert('❌ ลบไม่สำเร็จ: ' + error.message);
+            db.history = db.history.filter(h => h.id !== id);
+            render();
+        }
+
+        async function deleteCurrentTournament() {
+            if (!confirm('⚠️ ต้องการลบข้อมูล Tournament ปัจจุบันทั้งหมดใช่หรือไม่?\n(ผู้แข่ง + รอบทั้งหมดจะหายถาวร)')) return;
+            const oldId = db.currentTournament.id;
+            // ลบ row เก่าออกก่อน
+            await supabaseClient.from('tournaments').delete().eq('id', oldId);
+            db.currentTournament = { id: Date.now(), name: 'BOT TCG Tournament', date: '', players: [], rounds: [], branch: currentBranch || 'สุพรีมสามเสน' };
+            await saveDB();
+            alert('✅ ลบ Tournament ปัจจุบันเรียบร้อยแล้ว');
+        }
+
+        async function factoryReset() {
+            if (!confirm('⚠️⚠️ FACTORY RESET ⚠️⚠️\nจะลบข้อมูลทั้งหมด: Tournament + ประวัติทุกรายการ\nยืนยันหรือไม่?')) return;
+            const confirmed = prompt('พิมพ์ "RESET" เพื่อยืนยัน');
+            if (confirmed !== 'RESET') return alert('ยกเลิก — พิมพ์ไม่ตรง');
+            await supabaseClient.from('history').delete().neq('id', 0);
+            await supabaseClient.from('tournaments').delete().eq('id', db.currentTournament.id);
+            db.history = [];
+            db.currentTournament = { id: Date.now(), name: 'BOT TCG Tournament', date: '', players: [], rounds: [], branch: currentBranch || 'สุพรีมสามเสน' };
+            await saveDB();
+            alert('✅ Factory Reset เรียบร้อยแล้ว');
         }
 
         window.onload = initApp;
