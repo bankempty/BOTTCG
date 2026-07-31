@@ -770,7 +770,12 @@
                 `).join('');
             }
 
-            // BUG FIX #4: show/hide admin-only elements inside sections (e.g. จบทัวร์นาเมนต์ button)
+            // show/hide admin tab buttons
+            ['players', 'rounds', 'admin-manage'].forEach(tab => {
+                const btn = document.getElementById('tab-' + tab);
+                if (btn) btn.classList.toggle('hidden', !currentAdmin);
+            });
+            // show/hide admin-only elements inside sections (e.g. จบทัวร์นาเมนต์ button)
             document.querySelectorAll('section .admin-only').forEach(el => {
                 el.classList.toggle('hidden', !currentAdmin);
             });
