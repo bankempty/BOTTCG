@@ -194,7 +194,7 @@
                             <th class="p-4 text-center">W - L - D</th>
                             <th class="p-4 text-center text-emerald-300 font-bold">POINTS</th>
                             <th class="p-4 text-center cursor-pointer hover:text-emerald-300" onclick="openTiebreakModal()">OMWP% ⓘ</th>
-                            ${db.currentTournament && db.currentTournament.format === 'bo3' ? '<th class="p-4 text-center text-amber-400">GWP% ⓘ</th>' : ''}
+                            ${db.currentTournament && db.currentTournament.format === 'bo3' ? '<th class="p-4 text-center text-amber-400 cursor-pointer hover:text-amber-300" onclick="openTiebreakModal()">GWP% ⓘ</th>' : ''}
                             <th class="p-4 text-center cursor-pointer hover:text-emerald-300" onclick="openTiebreakModal()">OOMWP% ⓘ</th>
                         </tr>
                     </thead>
@@ -408,6 +408,10 @@
                 <div class="p-3 bg-slate-900/80 rounded-xl border border-cyan-500/20 space-y-1">
                     <div class="font-bold text-cyan-300 font-mono text-sm">3. OOMWP% (Opponents' Opponent Match Win %)</div>
                     <p class="text-slate-400"><b class="text-slate-200">อัตราการชนะของคู่แข่งของคู่แข่งเรา</b> ใช้เป็นตัวตัดสินขั้นสุดท้าย</p>
+                </div>
+                <div class="p-3 bg-slate-900/80 rounded-xl border border-amber-500/20 space-y-1">
+                    <div class="font-bold text-amber-300 font-mono text-sm">★ GWP% (Game Win % — เฉพาะ Bo3)</div>
+                    <p class="text-slate-400"><b class="text-slate-200">เปอร์เซ็นต์เกมที่ชนะในทุก match</b> เช่น ชนะ 2-0 และ 2-1 → gameWins=4, gameLosses=1 → GWP = 80%<br>ใช้เป็น tiebreaker ลำดับ 3 (หลัง OMWP%) แทน OOMWP% ในโหมด Bo3</p>
                 </div>
             </div>
             <div class="pt-2 flex justify-end">
