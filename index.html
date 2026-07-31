@@ -194,6 +194,7 @@
                             <th class="p-4 text-center">W - L - D</th>
                             <th class="p-4 text-center text-emerald-300 font-bold">POINTS</th>
                             <th class="p-4 text-center cursor-pointer hover:text-emerald-300" onclick="openTiebreakModal()">OMWP% ⓘ</th>
+                            ${db.currentTournament && db.currentTournament.format === 'bo3' ? '<th class="p-4 text-center text-amber-400">GWP% ⓘ</th>' : ''}
                             <th class="p-4 text-center cursor-pointer hover:text-emerald-300" onclick="openTiebreakModal()">OOMWP% ⓘ</th>
                         </tr>
                     </thead>
@@ -222,6 +223,32 @@
                     <div>
                         <label class="text-xs text-slate-400 block mb-1">วันที่จัด / สถานที่</label>
                         <input type="text" id="setup-tourney-date" onchange="updateTourneyInfo()" placeholder="เช่น 28/03/2026 @ ตลิ่งชัน" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm">
+                    </div>
+                </div>
+                <!-- Swiss Settings -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t border-slate-800/60">
+                    <div>
+                        <label class="text-xs text-slate-400 block mb-1">จำนวน Swiss Round</label>
+                        <div class="flex items-center gap-2">
+                            <input type="number" id="setup-total-rounds" onchange="updateTourneyInfo()" min="1" max="15" value="4" class="w-24 bg-slate-950/80 border border-slate-700/80 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-blue-500 text-sm font-mono">
+                            <span id="rounds-suggestion" class="text-xs text-emerald-400 font-mono"></span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400 block mb-1">Format การแข่ง</label>
+                        <select id="setup-format" onchange="updateTourneyInfo()" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-blue-500 text-sm">
+                            <option value="bo1">Bo1 (Best of 1)</option>
+                            <option value="bo3">Bo3 (Best of 3)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400 block mb-1">Cut Top (หลัง Swiss)</label>
+                        <select id="setup-cut-top" onchange="updateTourneyInfo()" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-blue-500 text-sm">
+                            <option value="0">ไม่มี CutTop</option>
+                            <option value="4">Top 4</option>
+                            <option value="8">Top 8</option>
+                            <option value="16">Top 16</option>
+                        </select>
                     </div>
                 </div>
             </div>
@@ -282,6 +309,25 @@
                 </div>
             </div>
             <div id="pairings-list" class="space-y-3"></div>
+
+            <!-- CutTop Button -->
+            <div id="cuttop-action" class="hidden">
+                <div class="cyber-card-admin p-5 rounded-2xl border border-amber-500/30 text-center space-y-3">
+                    <p class="text-amber-400 font-bold font-cyber text-lg">🏆 Swiss Rounds จบแล้ว!</p>
+                    <p id="cuttop-desc" class="text-slate-400 text-xs"></p>
+                    <button onclick="startCutTop()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-8 py-3 rounded-xl text-sm transition">
+                        ⚡ เริ่ม Elimination Bracket
+                    </button>
+                </div>
+            </div>
+
+            <!-- Elimination Bracket -->
+            <div id="elimination-section" class="hidden space-y-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-bold text-amber-400 font-cyber">🏆 ELIMINATION BRACKET</h3>
+                </div>
+                <div id="elimination-rounds" class="space-y-4"></div>
+            </div>
         </section>
 
         <!-- TAB 6: ADMIN MANAGEMENT (ADMIN ONLY) -->
@@ -379,7 +425,7 @@
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let db = {
-            currentTournament: { id: Date.now(), name: 'BOT TCG Tournament', date: '', players: [], rounds: [] },
+            currentTournament: { id: Date.now(), name: 'BOT TCG Tournament', date: '', players: [], rounds: [], format: 'bo1', totalRounds: 4, cutTop: 0, elimination: null },
             history: [],
             admins: []
         };
@@ -545,13 +591,28 @@
             });
         }
 
+        function suggestRounds(n) {
+            if (n <= 4) return 2;
+            if (n <= 8) return 3;
+            if (n <= 16) return 4;
+            if (n <= 32) return 5;
+            if (n <= 64) return 6;
+            return 7;
+        }
+
         function updateTourneyInfo() {
             const nameInput = document.getElementById('setup-tourney-name');
             const dateInput = document.getElementById('setup-tourney-date');
-            
+            const roundsInput = document.getElementById('setup-total-rounds');
+            const formatInput = document.getElementById('setup-format');
+            const cutTopInput = document.getElementById('setup-cut-top');
+
             db.currentTournament.name = nameInput ? nameInput.value.trim() || 'BOT TCG Tournament' : 'BOT TCG Tournament';
             db.currentTournament.date = dateInput ? dateInput.value.trim() : '';
-            
+            if (roundsInput) db.currentTournament.totalRounds = parseInt(roundsInput.value) || 4;
+            if (formatInput) db.currentTournament.format = formatInput.value || 'bo1';
+            if (cutTopInput) db.currentTournament.cutTop = parseInt(cutTopInput.value) || 0;
+
             saveDB();
             updatePairingsHeaderUI();
         }
@@ -667,6 +728,23 @@
             const dateInput = document.getElementById('setup-tourney-date');
             if (nameInput && nameInput.value !== db.currentTournament.name) nameInput.value = db.currentTournament.name || '';
             if (dateInput && dateInput.value !== db.currentTournament.date) dateInput.value = db.currentTournament.date || '';
+
+            // sync setup fields
+            const roundsInput = document.getElementById('setup-total-rounds');
+            const formatInput = document.getElementById('setup-format');
+            const cutTopInput = document.getElementById('setup-cut-top');
+            if (roundsInput) roundsInput.value = db.currentTournament.totalRounds || 4;
+            if (formatInput) formatInput.value = db.currentTournament.format || 'bo1';
+            if (cutTopInput) cutTopInput.value = db.currentTournament.cutTop || 0;
+
+            // round suggestion badge
+            const suggEl = document.getElementById('rounds-suggestion');
+            if (suggEl) {
+                const n = db.currentTournament.players.filter(p => p.status === 'active').length;
+                const s = suggestRounds(n);
+                suggEl.innerText = n > 0 ? `(${n} คน → แนะนำ ${s} รอบ)` : '';
+            }
+
             updatePairingsHeaderUI();
 
             const playerListEl = document.getElementById('player-list');
@@ -707,7 +785,7 @@
         function calculateStandings() {
             let stats = {};
             db.currentTournament.players.forEach(p => {
-                stats[p.id] = { id: p.id, name: p.name, status: p.status, played: 0, wins: 0, losses: 0, draws: 0, points: 0, opponents: new Set() };
+                stats[p.id] = { id: p.id, name: p.name, status: p.status, played: 0, wins: 0, losses: 0, draws: 0, points: 0, opponents: new Set(), gameWins: 0, gameLosses: 0 };
             });
 
             db.currentTournament.rounds.forEach(round => {
@@ -716,15 +794,17 @@
                     if (m.p1 && stats[m.p1]) stats[m.p1].opponents.add(m.p2);
                     if (m.p2 && stats[m.p2]) stats[m.p2].opponents.add(m.p1);
 
+                    const gp1 = m.gamesP1 || 0;
+                    const gp2 = m.gamesP2 || 0;
                     if (m.result === 'p1') {
-                        if (m.p1 && stats[m.p1]) { stats[m.p1].wins++; stats[m.p1].points += 3; stats[m.p1].played++; }
-                        if (m.p2 && stats[m.p2]) { stats[m.p2].losses++; stats[m.p2].played++; }
+                        if (m.p1 && stats[m.p1]) { stats[m.p1].wins++; stats[m.p1].points += 3; stats[m.p1].played++; stats[m.p1].gameWins += gp1; stats[m.p1].gameLosses += gp2; }
+                        if (m.p2 && stats[m.p2]) { stats[m.p2].losses++; stats[m.p2].played++; stats[m.p2].gameWins += gp2; stats[m.p2].gameLosses += gp1; }
                     } else if (m.result === 'p2') {
-                        if (m.p2 && stats[m.p2]) { stats[m.p2].wins++; stats[m.p2].points += 3; stats[m.p2].played++; }
-                        if (m.p1 && stats[m.p1]) { stats[m.p1].losses++; stats[m.p1].played++; }
+                        if (m.p2 && stats[m.p2]) { stats[m.p2].wins++; stats[m.p2].points += 3; stats[m.p2].played++; stats[m.p2].gameWins += gp2; stats[m.p2].gameLosses += gp1; }
+                        if (m.p1 && stats[m.p1]) { stats[m.p1].losses++; stats[m.p1].played++; stats[m.p1].gameWins += gp1; stats[m.p1].gameLosses += gp2; }
                     } else if (m.result === 'draw') {
-                        if (m.p1 && stats[m.p1]) { stats[m.p1].draws++; stats[m.p1].points += 1; stats[m.p1].played++; }
-                        if (m.p2 && stats[m.p2]) { stats[m.p2].draws++; stats[m.p2].points += 1; stats[m.p2].played++; }
+                        if (m.p1 && stats[m.p1]) { stats[m.p1].draws++; stats[m.p1].points += 1; stats[m.p1].played++; stats[m.p1].gameWins += gp1; stats[m.p1].gameLosses += gp2; }
+                        if (m.p2 && stats[m.p2]) { stats[m.p2].draws++; stats[m.p2].points += 1; stats[m.p2].played++; stats[m.p2].gameWins += gp2; stats[m.p2].gameLosses += gp1; }
                     }
                 });
             });
@@ -753,9 +833,14 @@
                 p.oomwp = oppOmwps.length > 0 ? (oppOmwps.reduce((a, b) => a + b, 0) / oppOmwps.length) : 0.33;
             });
 
+            list.forEach(p => {
+                p.gwp = (p.gameWins + p.gameLosses > 0) ? p.gameWins / (p.gameWins + p.gameLosses) : 0;
+            });
+
             list.sort((a, b) => {
                 if (b.points !== a.points) return b.points - a.points;
                 if (b.omwp !== a.omwp) return b.omwp - a.omwp;
+                if (db.currentTournament.format === 'bo3' && b.gwp !== a.gwp) return b.gwp - a.gwp;
                 return b.oomwp - a.oomwp;
             });
 
@@ -776,6 +861,7 @@
                     <td class="p-4 text-center font-mono">${s.wins} - ${s.losses} - ${s.draws}</td>
                     <td class="p-4 text-center font-mono font-bold text-emerald-300 text-base">${s.points}</td>
                     <td class="p-4 text-center font-mono text-slate-300">${(s.omwp * 100).toFixed(1)}%</td>
+                    ${db.currentTournament.format === 'bo3' ? `<td class="p-4 text-center font-mono text-amber-300">${((s.gwp||0) * 100).toFixed(1)}%</td>` : ''}
                     <td class="p-4 text-center font-mono text-slate-400">${(s.oomwp * 100).toFixed(1)}%</td>
                 </tr>
             `).join('') || `<tr><td colspan="8" class="p-6 text-center text-slate-500">ยังไม่มีข้อมูลตารางคะแนน</td></tr>`;
@@ -815,6 +901,30 @@
 
             renderAdminPairings();
             renderPublicPairings();
+            checkCutTopReady();
+        }
+
+        function checkCutTopReady() {
+            const ct = document.getElementById('cuttop-action');
+            const elSec = document.getElementById('elimination-section');
+            if (!ct || !elSec) return;
+            const t = db.currentTournament;
+            const totalRounds = t.totalRounds || 4;
+            const allSwissDone = t.rounds.length >= totalRounds && t.rounds.every(r => r.completed);
+
+            if (t.elimination && t.elimination.started) {
+                ct.classList.add('hidden');
+                elSec.classList.remove('hidden');
+                renderElimination();
+            } else if (allSwissDone && t.cutTop > 0) {
+                ct.classList.remove('hidden');
+                elSec.classList.add('hidden');
+                const desc = document.getElementById('cuttop-desc');
+                if (desc) desc.innerText = `Swiss ${totalRounds} รอบจบแล้ว — พร้อม Cut Top ${t.cutTop} คนเข้าสู่ Elimination`;
+            } else {
+                ct.classList.add('hidden');
+                elSec.classList.add('hidden');
+            }
         }
 
         function renderAdminPairings() {
@@ -843,10 +953,18 @@
                             <span class="text-xs text-slate-500 font-mono">VS</span>
                             <span class="font-semibold text-slate-200 ${m.result === 'p2' ? 'text-emerald-400 underline' : ''}">${p2Name}</span>
                         </div>
-                        <div class="flex gap-1.5">
-                            <button onclick="setMatchResult(${roundIdx}, ${mIdx}, 'p1')" class="px-3 py-1 rounded text-xs font-bold ${m.result === 'p1' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">P1 ชนะ</button>
-                            <button onclick="setMatchResult(${roundIdx}, ${mIdx}, 'draw')" class="px-3 py-1 rounded text-xs font-bold ${m.result === 'draw' ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">เสมอ</button>
-                            <button onclick="setMatchResult(${roundIdx}, ${mIdx}, 'p2')" class="px-3 py-1 rounded text-xs font-bold ${m.result === 'p2' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">P2 ชนะ</button>
+                        <div class="flex gap-1.5 flex-wrap justify-center">
+                            ${db.currentTournament.format === 'bo3' ? `
+                                <button onclick="setMatchResult(${roundIdx}, ${mIdx}, 'p1', 2, 0)" class="px-2 py-1 rounded text-xs font-bold ${m.result === 'p1' && m.gamesP1 === 2 && m.gamesP2 === 0 ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">2-0</button>
+                                <button onclick="setMatchResult(${roundIdx}, ${mIdx}, 'p1', 2, 1)" class="px-2 py-1 rounded text-xs font-bold ${m.result === 'p1' && m.gamesP1 === 2 && m.gamesP2 === 1 ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">2-1</button>
+                                <button onclick="setMatchResult(${roundIdx}, ${mIdx}, 'draw', 1, 1)" class="px-2 py-1 rounded text-xs font-bold ${m.result === 'draw' ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">1-1</button>
+                                <button onclick="setMatchResult(${roundIdx}, ${mIdx}, 'p2', 1, 2)" class="px-2 py-1 rounded text-xs font-bold ${m.result === 'p2' && m.gamesP1 === 1 && m.gamesP2 === 2 ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">1-2</button>
+                                <button onclick="setMatchResult(${roundIdx}, ${mIdx}, 'p2', 0, 2)" class="px-2 py-1 rounded text-xs font-bold ${m.result === 'p2' && m.gamesP1 === 0 && m.gamesP2 === 2 ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">0-2</button>
+                            ` : `
+                                <button onclick="setMatchResult(${roundIdx}, ${mIdx}, 'p1')" class="px-3 py-1 rounded text-xs font-bold ${m.result === 'p1' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">P1 ชนะ</button>
+                                <button onclick="setMatchResult(${roundIdx}, ${mIdx}, 'draw')" class="px-3 py-1 rounded text-xs font-bold ${m.result === 'draw' ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">เสมอ</button>
+                                <button onclick="setMatchResult(${roundIdx}, ${mIdx}, 'p2')" class="px-3 py-1 rounded text-xs font-bold ${m.result === 'p2' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">P2 ชนะ</button>
+                            `}
                         </div>
                     </div>
                 `;
@@ -884,7 +1002,10 @@
                         </div>
                         <div class="flex justify-between items-center py-2">
                             <div class="font-semibold text-slate-100 flex-1 truncate ${m.result === 'p1' ? 'text-emerald-300 font-bold' : ''}">🎴 ${p1Name}</div>
-                            <div class="px-3 font-mono text-xs text-slate-500">VS</div>
+                            <div class="text-center px-3">
+                                <div class="font-mono text-xs text-slate-500">VS</div>
+                                ${m.result && db.currentTournament.format === 'bo3' ? `<div class="font-mono text-xs text-amber-400 font-bold">${m.gamesP1 ?? 0}-${m.gamesP2 ?? 0}</div>` : ''}
+                            </div>
                             <div class="font-semibold text-slate-100 flex-1 text-right truncate ${m.result === 'p2' ? 'text-emerald-300 font-bold' : ''}">${p2Name} 🎴</div>
                         </div>
                     </div>
@@ -893,6 +1014,10 @@
         }
 
         function generateNextRound() {
+            const totalRounds = db.currentTournament.totalRounds || 4;
+            if (db.currentTournament.rounds.length >= totalRounds) {
+                return alert(`Swiss Rounds ครบ ${totalRounds} รอบแล้วครับ\nถ้าต้องการ CutTop ให้กดปุ่ม "เริ่ม Elimination Bracket"`);
+            }
             let activePlayers = db.currentTournament.players.filter(p => p.status === 'active');
             if (activePlayers.length < 2) return alert('ต้องมีผู้เล่นสถานะ Active อย่างน้อย 2 คนเพื่อจับคู่');
 
@@ -943,13 +1068,16 @@
         // BUG FIX #8: This function was called from HTML but never defined
         async function resetCurrentTournament() {
             if (!confirm('⚠️ ต้องการ Reset ทัวร์นาเมนต์ปัจจุบันทั้งหมดใช่หรือไม่?\n(รายชื่อผู้แข่งขันและรอบทั้งหมดจะถูกลบออก)')) return;
-            db.currentTournament = { id: Date.now(), name: 'BOT TCG Tournament', date: '', players: [], rounds: [], branch: currentBranch || 'สุพรีมสามเสน' };
+            db.currentTournament = { id: Date.now(), name: 'BOT TCG Tournament', date: '', players: [], rounds: [], format: 'bo1', totalRounds: 4, cutTop: 0, elimination: null, branch: currentBranch || 'สุพรีมสามเสน' };
             await saveDB();
             alert('Reset ทัวร์นาเมนต์เรียบร้อยแล้ว');
         }
 
-        function setMatchResult(roundIdx, matchIdx, result) {
-            db.currentTournament.rounds[roundIdx].matches[matchIdx].result = result;
+        function setMatchResult(roundIdx, matchIdx, result, gamesP1 = 0, gamesP2 = 0) {
+            const m = db.currentTournament.rounds[roundIdx].matches[matchIdx];
+            m.result = result;
+            m.gamesP1 = gamesP1;
+            m.gamesP2 = gamesP2;
             let allDone = db.currentTournament.rounds[roundIdx].matches.every(m => m.result !== null);
             db.currentTournament.rounds[roundIdx].completed = allDone;
             saveDB();
@@ -1070,6 +1198,132 @@
             }
         }
 
+        function startCutTop() {
+            const t = db.currentTournament;
+            const cutSize = t.cutTop;
+            if (!cutSize || cutSize < 2) return alert('กรุณาตั้งค่า Cut Top ก่อน');
+            const standings = calculateStandings().filter(s => s.status === 'active');
+            if (standings.length < cutSize) return alert(`ผู้แข่งน้อยกว่า Top ${cutSize} คน`);
+
+            const topPlayers = standings.slice(0, cutSize).map(s => s.id);
+
+            // build bracket: seed 1 vs seed N, seed 2 vs seed N-1, ...
+            function buildRound(players, roundName) {
+                const matches = [];
+                for (let i = 0; i < players.length / 2; i++) {
+                    matches.push({ p1: players[i], p2: players[players.length - 1 - i], result: null, gamesP1: 0, gamesP2: 0 });
+                }
+                return { name: roundName, matches, completed: false };
+            }
+
+            function getRoundName(size) {
+                if (size === 8) return 'Quarterfinals (QF)';
+                if (size === 4) return 'Semifinals (SF)';
+                if (size === 2) return 'Finals';
+                return `Top ${size} Round`;
+            }
+
+            // first round only; subsequent rounds filled as results come in
+            const firstRound = buildRound(topPlayers, getRoundName(topPlayers.length));
+            t.elimination = { cutSize, rounds: [firstRound], started: true, champion: null };
+            saveDB();
+        }
+
+        function setEliminationResult(roundIdx, matchIdx, result, gamesP1 = 0, gamesP2 = 0) {
+            const el = db.currentTournament.elimination;
+            const m = el.rounds[roundIdx].matches[matchIdx];
+            m.result = result;
+            m.gamesP1 = gamesP1;
+            m.gamesP2 = gamesP2;
+
+            // check if round complete
+            const allDone = el.rounds[roundIdx].matches.every(x => x.result !== null);
+            el.rounds[roundIdx].completed = allDone;
+
+            if (allDone) {
+                // collect winners
+                const winners = el.rounds[roundIdx].matches.map(x => x.result === 'p1' ? x.p1 : x.p2);
+                if (winners.length === 1) {
+                    el.champion = winners[0];
+                } else {
+                    // build next round
+                    function getRoundName(size) {
+                        if (size === 8) return 'Quarterfinals (QF)';
+                        if (size === 4) return 'Semifinals (SF)';
+                        if (size === 2) return 'Finals';
+                        return `Top ${size} Round`;
+                    }
+                    const nextMatches = [];
+                    for (let i = 0; i < winners.length / 2; i++) {
+                        nextMatches.push({ p1: winners[i], p2: winners[winners.length - 1 - i], result: null, gamesP1: 0, gamesP2: 0 });
+                    }
+                    el.rounds.push({ name: getRoundName(winners.length), matches: nextMatches, completed: false });
+                }
+            }
+            saveDB();
+            renderElimination();
+        }
+
+        function renderElimination() {
+            const container = document.getElementById('elimination-rounds');
+            if (!container) return;
+            const el = db.currentTournament.elimination;
+            if (!el || !el.started) return;
+            const fmt = db.currentTournament.format || 'bo1';
+
+            if (el.champion) {
+                const champ = db.currentTournament.players.find(p => p.id === el.champion);
+                container.innerHTML = `
+                    <div class="cyber-card p-8 rounded-2xl text-center border border-amber-500/50 space-y-3">
+                        <div class="text-5xl">🏆</div>
+                        <h2 class="text-2xl font-black text-amber-400 font-cyber">CHAMPION</h2>
+                        <p class="text-3xl font-bold text-slate-100">${champ ? champ.name : 'Unknown'}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = el.rounds.map((round, rIdx) => {
+                const isLatest = rIdx === el.rounds.length - 1;
+                return `
+                    <div class="space-y-2">
+                        <h4 class="text-sm font-bold text-amber-400 font-mono uppercase tracking-wider">${round.name}</h4>
+                        ${round.matches.map((m, mIdx) => {
+                            const p1Obj = db.currentTournament.players.find(p => p.id === m.p1);
+                            const p2Obj = db.currentTournament.players.find(p => p.id === m.p2);
+                            const p1Name = p1Obj ? p1Obj.name : (m.p1 ? '?' : 'TBD');
+                            const p2Name = p2Obj ? p2Obj.name : (m.p2 ? '?' : 'TBD');
+                            const isBo3 = fmt === 'bo3';
+                            const btns = isLatest && !round.completed && m.p1 && m.p2 ? (isBo3 ? `
+                                <div class="flex gap-1 flex-wrap">
+                                    <button onclick="setEliminationResult(${rIdx},${mIdx},'p1',2,0)" class="px-2 py-1 rounded text-xs font-bold ${m.result==='p1'&&m.gamesP1===2&&m.gamesP2===0?'bg-emerald-500 text-slate-950':'bg-slate-800 text-slate-300'}">2-0</button>
+                                    <button onclick="setEliminationResult(${rIdx},${mIdx},'p1',2,1)" class="px-2 py-1 rounded text-xs font-bold ${m.result==='p1'&&m.gamesP1===2&&m.gamesP2===1?'bg-emerald-500 text-slate-950':'bg-slate-800 text-slate-300'}">2-1</button>
+                                    <button onclick="setEliminationResult(${rIdx},${mIdx},'p2',1,2)" class="px-2 py-1 rounded text-xs font-bold ${m.result==='p2'&&m.gamesP1===1&&m.gamesP2===2?'bg-emerald-500 text-slate-950':'bg-slate-800 text-slate-300'}">1-2</button>
+                                    <button onclick="setEliminationResult(${rIdx},${mIdx},'p2',0,2)" class="px-2 py-1 rounded text-xs font-bold ${m.result==='p2'&&m.gamesP1===0&&m.gamesP2===2?'bg-emerald-500 text-slate-950':'bg-slate-800 text-slate-300'}">0-2</button>
+                                </div>
+                            ` : `
+                                <div class="flex gap-1">
+                                    <button onclick="setEliminationResult(${rIdx},${mIdx},'p1')" class="px-3 py-1 rounded text-xs font-bold ${m.result==='p1'?'bg-emerald-500 text-slate-950':'bg-slate-800 text-slate-300'}">P1 ชนะ</button>
+                                    <button onclick="setEliminationResult(${rIdx},${mIdx},'p2')" class="px-3 py-1 rounded text-xs font-bold ${m.result==='p2'?'bg-emerald-500 text-slate-950':'bg-slate-800 text-slate-300'}">P2 ชนะ</button>
+                                </div>
+                            `) : '';
+                            const scoreLabel = isBo3 && m.result ? ` <span class="text-amber-400 font-mono text-xs">(${m.gamesP1}-${m.gamesP2})</span>` : '';
+                            return `
+                                <div class="cyber-card-admin p-3 rounded-xl flex flex-col sm:flex-row justify-between items-center gap-2 border border-slate-800">
+                                    <div class="flex items-center gap-3 flex-1 justify-center">
+                                        <span class="font-semibold text-sm ${m.result==='p1'?'text-emerald-400 font-bold':'text-slate-200'}">${p1Name}</span>
+                                        <span class="text-slate-500 text-xs font-mono">VS</span>
+                                        <span class="font-semibold text-sm ${m.result==='p2'?'text-emerald-400 font-bold':'text-slate-200'}">${p2Name}</span>
+                                        ${scoreLabel}
+                                    </div>
+                                    ${btns}
+                                </div>`;
+                        }).join('')}
+                    </div>
+                `;
+            }).join('');
+        }
+
         async function deleteAllHistory() {
             if (!confirm('⚠️ ต้องการลบประวัติการแข่งขันทั้งหมดใช่หรือไม่?\nข้อมูลจะหายถาวร ไม่สามารถกู้คืนได้')) return;
             const { error } = await supabaseClient.from('history').delete().neq('id', 0);
@@ -1092,7 +1346,7 @@
             const oldId = db.currentTournament.id;
             // ลบ row เก่าออกก่อน
             await supabaseClient.from('tournaments').delete().eq('id', oldId);
-            db.currentTournament = { id: Date.now(), name: 'BOT TCG Tournament', date: '', players: [], rounds: [], branch: currentBranch || 'สุพรีมสามเสน' };
+            db.currentTournament = { id: Date.now(), name: 'BOT TCG Tournament', date: '', players: [], rounds: [], format: 'bo1', totalRounds: 4, cutTop: 0, elimination: null, branch: currentBranch || 'สุพรีมสามเสน' };
             await saveDB();
             alert('✅ ลบ Tournament ปัจจุบันเรียบร้อยแล้ว');
         }
@@ -1104,7 +1358,7 @@
             await supabaseClient.from('history').delete().neq('id', 0);
             await supabaseClient.from('tournaments').delete().eq('id', db.currentTournament.id);
             db.history = [];
-            db.currentTournament = { id: Date.now(), name: 'BOT TCG Tournament', date: '', players: [], rounds: [], branch: currentBranch || 'สุพรีมสามเสน' };
+            db.currentTournament = { id: Date.now(), name: 'BOT TCG Tournament', date: '', players: [], rounds: [], format: 'bo1', totalRounds: 4, cutTop: 0, elimination: null, branch: currentBranch || 'สุพรีมสามเสน' };
             await saveDB();
             alert('✅ Factory Reset เรียบร้อยแล้ว');
         }
