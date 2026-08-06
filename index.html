@@ -452,6 +452,17 @@
         </div>
     </div>
 
+    <!-- Modal Player Detail -->
+    <div id="player-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
+        <div class="cyber-card p-6 rounded-2xl max-w-lg w-full space-y-4 border border-slate-700">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 id="player-modal-title" class="text-lg font-bold text-emerald-400 font-cyber"></h3>
+                <button onclick="closePlayerModal()" class="text-slate-400 hover:text-slate-100 text-lg">✕</button>
+            </div>
+            <div id="player-modal-body" class="space-y-2 max-h-[60vh] overflow-y-auto pr-1 text-sm"></div>
+        </div>
+    </div>
+
     <!-- Modal Tiebreak Info -->
     <div id="tiebreak-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
         <div class="cyber-card cyber-card-glow p-6 rounded-2xl max-w-lg w-full space-y-4 border border-emerald-500/40">
@@ -1207,9 +1218,9 @@
             let list = Object.values(overall).sort((a, b) => b.points - a.points);
 
             tbody.innerHTML = list.map((p, idx) => `
-                <tr class="hover:bg-slate-900/40">
+                <tr class="hover:bg-slate-800/50 cursor-pointer transition" onclick="openPlayerModal('${p.name.replace(/'/g,"\\'")}')">
                     <td class="p-4 font-mono font-bold text-amber-400">#${idx + 1}</td>
-                    <td class="p-4 font-semibold text-slate-100">${p.name}</td>
+                    <td class="p-4 font-semibold text-slate-100">${p.name} <span class="text-slate-600 text-xs ml-1">›</span></td>
                     <td class="p-4 text-center font-mono">${p.matches}</td>
                     <td class="p-4 text-center font-mono">${p.wins}</td>
                     <td class="p-4 text-center font-mono font-bold text-amber-300 text-base">${p.points}</td>
@@ -1437,6 +1448,70 @@
             alert('✅ Factory Reset เรียบร้อยแล้ว');
         }
 
+
+        // ─── PLAYER DETAIL MODAL ───
+        function openPlayerModal(name) {
+            document.getElementById('player-modal-title').innerText = '👤 ' + name;
+            const entries = db.history
+                .map(h => ({ h, s: h.standings.find(s => s.name === name) }))
+                .filter(e => e.s);
+
+            const isAdmin = !!currentAdmin;
+            const body = document.getElementById('player-modal-body');
+
+            if (entries.length === 0) {
+                body.innerHTML = '<p class="text-slate-500 text-center py-4">ไม่พบข้อมูล</p>';
+            } else {
+                body.innerHTML = entries.map(({ h, s }) => `
+                    <div class="bg-slate-900/60 border border-slate-700 rounded-xl p-3 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="font-bold text-slate-200 text-sm">${h.name}</div>
+                                <div class="text-xs text-slate-500">📅 ${h.date}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xs text-slate-400">Pos <span class="font-mono font-bold text-slate-200">#${s.pos}</span></div>
+                                <div class="text-xs text-slate-400">Pts <span class="font-mono font-bold text-amber-300">${s.pts ?? s.points ?? 0}</span></div>
+                            </div>
+                        </div>
+                        ${isAdmin ? `
+                        <div class="flex gap-2 items-center pt-1 border-t border-slate-800">
+                            <input type="number" value="${s.pos}" min="1" class="w-14 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-center text-slate-200 focus:outline-none focus:border-blue-500" placeholder="Pos" id="edit-pos-${h.id}">
+                            <span class="text-slate-600 text-xs">Pos</span>
+                            <input type="number" value="${s.pts ?? s.points ?? 0}" class="w-16 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-center text-slate-200 focus:outline-none focus:border-blue-500" placeholder="Pts" id="edit-pts-${h.id}">
+                            <span class="text-slate-600 text-xs">Pts</span>
+                            <button onclick="savePlayerEdit('${h.id}','${name.replace(/'/g,"\\'")}',this)" class="ml-auto text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded-lg transition">💾 แก้ไข</button>
+                        </div>` : ''}
+                    </div>
+                `).join('');
+            }
+            document.getElementById('player-modal').classList.remove('hidden');
+        }
+
+        function closePlayerModal() {
+            document.getElementById('player-modal').classList.add('hidden');
+        }
+
+        async function savePlayerEdit(histId, playerName, btn) {
+            const newPos = parseInt(document.getElementById('edit-pos-' + histId).value);
+            const newPts = parseFloat(document.getElementById('edit-pts-' + histId).value);
+            if (isNaN(newPos) || isNaN(newPts)) return alert('กรุณากรอกตัวเลขให้ถูกต้อง');
+
+            const entry = db.history.find(h => String(h.id) === String(histId));
+            if (!entry) return alert('ไม่พบข้อมูล');
+
+            const updated = entry.standings.map(s =>
+                s.name === playerName ? { ...s, pos: newPos, pts: newPts, points: newPts } : s
+            );
+
+            const { error } = await supabaseClient.from('history').update({ standings: updated }).eq('id', histId);
+            if (error) return alert('❌ บันทึกไม่สำเร็จ: ' + error.message);
+
+            entry.standings = updated;
+            btn.innerText = '✅ บันทึกแล้ว';
+            btn.disabled = true;
+            renderDashboard();
+        }
 
         // ─── UPLOAD / PASTE FEATURE ───
         function showUploadPasteBox() {
