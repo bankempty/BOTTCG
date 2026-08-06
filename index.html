@@ -195,7 +195,7 @@
                             <th class="p-4 text-center">W - L - D</th>
                             <th class="p-4 text-center text-emerald-300 font-bold">POINTS</th>
                             <th class="p-4 text-center cursor-pointer hover:text-emerald-300" onclick="openTiebreakModal()">OMWP% ⓘ</th>
-                            ${db.currentTournament && db.currentTournament.format === 'bo3' ? '<th class="p-4 text-center text-amber-400 cursor-pointer hover:text-amber-300" onclick="openTiebreakModal()">GWP% ⓘ</th>' : ''}
+                            <th class="p-4 text-center text-amber-400 cursor-pointer hover:text-amber-300" onclick="openTiebreakModal()">GWP% ⓘ</th>
                             <th class="p-4 text-center cursor-pointer hover:text-emerald-300" onclick="openTiebreakModal()">OOMWP% ⓘ</th>
                         </tr>
                     </thead>
@@ -636,10 +636,10 @@
         }
 
         function switchTab(tab) {
-            const adminTabs = ['players', 'rounds', 'admin-manage'];
+            const adminTabs = ['players', 'rounds', 'admin-manage', 'upload'];
             if (adminTabs.includes(tab) && !currentAdmin) tab = 'dashboard';
 
-            ['dashboard', 'pairings-public', 'standings', 'history', 'players', 'rounds', 'admin-manage'].forEach(t => {
+            ['dashboard', 'pairings-public', 'standings', 'history', 'players', 'rounds', 'admin-manage', 'upload'].forEach(t => {
                 const sec = document.getElementById(`sec-${t}`);
                 if (sec) sec.classList.toggle('hidden', t !== tab);
 
@@ -1199,7 +1199,7 @@
                 h.standings.forEach(s => {
                     if (!overall[s.name]) overall[s.name] = { name: s.name, matches: 0, wins: 0, points: 0 };
                     overall[s.name].matches += 1;                        // นับจำนวนรายการที่เข้าร่วม
-                    overall[s.name].wins += (s.pos === 1 ? 1 : 0);      // นับจำนวนครั้งที่ได้ที่ 1
+                    overall[s.name].wins += (parseInt(s.pos) === 1 ? 1 : 0); // นับจำนวนครั้งที่ได้ที่ 1
                     overall[s.name].points += (s.pts ?? s.points ?? 0); // รองรับทั้ง pts และ points
                 });
             });
