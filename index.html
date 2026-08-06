@@ -1198,9 +1198,9 @@
             db.history.forEach(h => {
                 h.standings.forEach(s => {
                     if (!overall[s.name]) overall[s.name] = { name: s.name, matches: 0, wins: 0, points: 0 };
-                    overall[s.name].matches += s.played;
-                    overall[s.name].wins += s.wins;
-                    overall[s.name].points += s.points;
+                    overall[s.name].matches += 1;                        // นับจำนวนรายการที่เข้าร่วม
+                    overall[s.name].wins += (s.pos === 1 ? 1 : 0);      // นับจำนวนครั้งที่ได้ที่ 1
+                    overall[s.name].points += (s.pts ?? s.points ?? 0); // รองรับทั้ง pts และ points
                 });
             });
 
