@@ -64,9 +64,6 @@
                             <th class="px-4 py-3">Pos</th>
                             <th class="px-4 py-3">Player</th>
                             <th class="px-4 py-3 text-center">Pts</th>
-                            <th class="px-4 py-3 text-center hidden sm:table-cell">MWP</th>
-                            <th class="px-4 py-3 text-center hidden sm:table-cell">Opp MW</th>
-                            <th class="px-4 py-3 text-center hidden sm:table-cell">Opp T1</th>
                         </tr>
                     </thead>
                     <tbody id="latest-tbody" class="divide-y divide-slate-800/60"></tbody>
@@ -139,9 +136,6 @@
                                     <th class="px-2 py-2">Pos</th>
                                     <th class="px-2 py-2 text-left">Player</th>
                                     <th class="px-2 py-2">Pts</th>
-                                    <th class="px-2 py-2">MWP</th>
-                                    <th class="px-2 py-2">Opp MW</th>
-                                    <th class="px-2 py-2">Opp T1</th>
                                     <th class="px-2 py-2"></th>
                                 </tr>
                             </thead>
@@ -294,7 +288,7 @@ async function handleImageUpload() {
                     role: 'user',
                     content: [
                         { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 } },
-                        { type: 'text', text: 'This is a TCG tournament standings table. Extract all rows and return ONLY a raw JSON array (no markdown, no explanation) with objects: {"pos": number, "name": string, "pts": number, "mwp": number, "opp_mw": number, "opp_t1": number}. Use 0 for missing values.' }
+                        { type: 'text', text: 'This is a TCG tournament standings table. Extract all rows and return ONLY a raw JSON array (no markdown, no explanation) with objects: {"pos": number, "name": string, "pts": number}. Use 0 for missing values.' }
                     ]
                 }]
             })
@@ -342,12 +336,9 @@ function parsePastedText() {
 
     // Section header patterns — handle OCR typos (Plaver=Player, C=MWP, etc.)
     const HEADERS = {
-        pos:    /^pos$/i,
-        name:   /^play[ae]r[s]?$|^plaver$/i,
-        pts:    /^pts?$/i,
-        mwp:    /^mwp$|^c$|^mw$/i,
-        opp_mw: /^opp\s*m?w[p]?$|^opp\s*mw$/i,
-        opp_t1: /^opp\s*t[01]?$|^t1$/i,
+        pos:  /^pos$/i,
+        name: /^play[ae]r[s]?$|^plaver$/i,
+        pts:  /^pts?$/i,
     };
 
     const sections = {};
@@ -376,19 +367,13 @@ function parsePastedText() {
         return;
     }
 
-    const pos    = sections.pos    || [];
-    const pts    = sections.pts    || [];
-    const mwp    = sections.mwp    || [];
-    const opp_mw = sections.opp_mw || [];
-    const opp_t1 = sections.opp_t1 || [];
+    const pos = sections.pos || [];
+    const pts = sections.pts || [];
 
     const rows = names.map((name, i) => ({
         pos:    parseInt(pos[i])    || i + 1,
         name:   name,
         pts:    parseFloat(pts[i])    || 0,
-        mwp:    parseFloat(mwp[i])    || 0,
-        opp_mw: parseFloat(opp_mw[i]) || 0,
-        opp_t1: parseFloat(opp_t1[i]) || 0,
     }));
 
     hidePasteBox();
@@ -414,12 +399,6 @@ function addRow(r = {}) {
     const tr = document.createElement('tr');
     tr.className = 'border-b border-slate-800/60';
     tr.innerHTML = `
-        <td class="px-1 py-1"><input type="number" value="${r.pos || idx}" class="w-12 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-center text-slate-200 focus:outline-none row-pos"></td>
-        <td class="px-1 py-1"><input type="text" value="${r.name || ''}" placeholder="Player name" class="w-36 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none row-name"></td>
-        <td class="px-1 py-1"><input type="number" value="${r.pts ?? ''}" class="w-14 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-center text-slate-200 focus:outline-none row-pts"></td>
-        <td class="px-1 py-1"><input type="number" step="0.001" value="${r.mwp ?? ''}" class="w-16 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-center text-slate-200 focus:outline-none row-mwp"></td>
-        <td class="px-1 py-1"><input type="number" step="0.001" value="${r.opp_mw ?? ''}" class="w-16 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-center text-slate-200 focus:outline-none row-opp_mw"></td>
-        <td class="px-1 py-1"><input type="number" step="0.0001" value="${r.opp_t1 ?? ''}" class="w-16 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-center text-slate-200 focus:outline-none row-opp_t1"></td>
         <td class="px-1 py-1"><button onclick="this.closest('tr').remove()" class="text-red-400 hover:text-red-300 text-xs px-1">✕</button></td>
     `;
     tbody.appendChild(tr);
@@ -437,9 +416,6 @@ function getFormRows() {
         pos: parseInt(tr.querySelector('.row-pos').value) || 0,
         name: tr.querySelector('.row-name').value.trim(),
         pts: parseFloat(tr.querySelector('.row-pts').value) || 0,
-        mwp: parseFloat(tr.querySelector('.row-mwp').value) || 0,
-        opp_mw: parseFloat(tr.querySelector('.row-opp_mw').value) || 0,
-        opp_t1: parseFloat(tr.querySelector('.row-opp_t1').value) || 0,
     })).filter(r => r.name);
 }
 
@@ -481,9 +457,6 @@ function renderStandingsTable(standings, tbodyId) {
             <td class="px-4 py-3 font-mono font-bold ${rankClass}">${medal || r.pos}</td>
             <td class="px-4 py-3 font-semibold text-slate-100">${r.name}</td>
             <td class="px-4 py-3 text-center font-mono font-bold text-emerald-300 text-base">${r.pts}</td>
-            <td class="px-4 py-3 text-center font-mono text-slate-300 hidden sm:table-cell">${typeof r.mwp === 'number' ? (r.mwp <= 1 ? (r.mwp*100).toFixed(1)+'%' : r.mwp) : r.mwp || '-'}</td>
-            <td class="px-4 py-3 text-center font-mono text-slate-400 hidden sm:table-cell">${typeof r.opp_mw === 'number' ? (r.opp_mw*100).toFixed(1)+'%' : r.opp_mw || '-'}</td>
-            <td class="px-4 py-3 text-center font-mono text-slate-500 hidden sm:table-cell">${typeof r.opp_t1 === 'number' ? r.opp_t1.toFixed(4) : r.opp_t1 || '-'}</td>
         </tr>`;
     }).join('');
 }
@@ -564,9 +537,6 @@ function render() {
                                 <tr>
                                     <th class="px-4 py-2">Pos</th><th class="px-4 py-2 text-left">Player</th>
                                     <th class="px-4 py-2 text-center">Pts</th>
-                                    <th class="px-4 py-2 text-center hidden sm:table-cell">MWP</th>
-                                    <th class="px-4 py-2 text-center hidden sm:table-cell">Opp MW</th>
-                                    <th class="px-4 py-2 text-center hidden sm:table-cell">Opp T1</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-800/60" id="hist-${h.id}"></tbody>
